@@ -1,0 +1,35 @@
+{
+  "name": "md",
+  "version": "0.1.0",
+  "description": "CLI tool for indexing and searching local markdown files via Meilisearch",
+  "type": "module",
+  "bin": {
+    "md": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --outdir dist --target bun",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "node scripts/install-hooks.cjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "chalk": "^5.4.1",
+    "effect": "^3.16.10",
+    "gray-matter": "^4.0.3",
+    "meilisearch": "^0.44.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  }
+}

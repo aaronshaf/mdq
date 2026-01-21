@@ -1,0 +1,299 @@
+import { EXIT_CODES, type MdError, getExitCode } from '../lib/errors.js';
+import { getFormatter } from '../lib/formatters.js';
+import { runMcpCommand } from './commands/mcp.js';
+import {
+	runSearchCommand,
+	runSearchIndexCommand,
+	runSearchStatusCommand,
+} from './commands/search.js';
+
+// Read version at module load time - Bun resolves JSON imports synchronously
+import packageJson from '../../package.json';
+const VERSION = packageJson.version;
+
+interface ParsedArgs {
+	command: string;
+	subcommand?: string;
+	positional: string[];
+	options: {
+		help: boolean;
+		version: boolean;
+		verbose: boolean;
+		json: boolean;
+		xml: boolean;
+		path?: string;
+		limit?: number;
+		labels?: string[];
+		author?: string;
+		createdAfter?: string;
+		createdBefore?: string;
+		createdWithin?: string;
+		updatedAfter?: string;
+		updatedBefore?: string;
+		updatedWithin?: string;
+		stale?: string;
+		sort?: string;
+	};
+}
+
+type BooleanFlag = 'help' | 'version' | 'verbose' | 'json' | 'xml';
+type StringFlag =
+	| 'path'
+	| 'author'
+	| 'createdAfter'
+	| 'createdBefore'
+	| 'createdWithin'
+	| 'updatedAfter'
+	| 'updatedBefore'
+	| 'updatedWithin'
+	| 'stale'
+	| 'sort';
+
+const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
+	'--help': 'help',
+	'-h': 'help',
+	'--version': 'version',
+	'-v': 'version',
+	'--verbose': 'verbose',
+	'--json': 'json',
+	'--xml': 'xml',
+};
+
+const STRING_FLAGS: Record<string, StringFlag> = {
+	'--path': 'path',
+	'--author': 'author',
+	'--created-after': 'createdAfter',
+	'--created-before': 'createdBefore',
+	'--created-within': 'createdWithin',
+	'--updated-after': 'updatedAfter',
+	'--updated-before': 'updatedBefore',
+	'--updated-within': 'updatedWithin',
+	'--stale': 'stale',
+	'--sort': 'sort',
+};
+
+function handlePositionalArg(result: ParsedArgs, arg: string): void {
+	if (!result.command) {
+		result.command = arg;
+	} else if (
+		!result.subcommand &&
+		result.command === 'search' &&
+		(arg === 'index' || arg === 'status')
+	) {
+		result.subcommand = arg;
+	} else {
+		result.positional.push(arg);
+	}
+}
+
+interface ParseResult {
+	parsed: ParsedArgs;
+	unknownFlags: string[];
+}
+
+function tryParseFlag(
+	arg: string,
+	nextArg: string | undefined,
+	options: ParsedArgs['options'],
+): number {
+	const boolFlag = BOOLEAN_FLAGS[arg];
+	if (boolFlag) {
+		options[boolFlag] = true;
+		return 1;
+	}
+
+	const strFlag = STRING_FLAGS[arg];
+	if (strFlag && nextArg !== undefined) {
+		options[strFlag] = nextArg;
+		return 2;
+	}
+
+	if (arg === '--limit' && nextArg !== undefined) {
+		options.limit = Number.parseInt(nextArg, 10);
+		return 2;
+	}
+
+	if (arg === '--labels' && nextArg !== undefined) {
+		options.labels = options.labels ?? [];
+		options.labels.push(...nextArg.split(',').map((l) => l.trim()));
+		return 2;
+	}
+
+	return 0;
+}
+
+function parseArgs(args: string[]): ParseResult {
+	const result: ParsedArgs = {
+		command: '',
+		positional: [],
+		options: {
+			help: false,
+			version: false,
+			verbose: false,
+			json: false,
+			xml: false,
+		},
+	};
+	const unknownFlags: string[] = [];
+
+	let i = 0;
+	while (i < args.length) {
+		const arg = args[i]!;
+		const consumed = tryParseFlag(arg, args[i + 1], result.options);
+
+		if (consumed > 0) {
+			i += consumed;
+			continue;
+		}
+
+		if (arg.startsWith('-')) {
+			unknownFlags.push(arg);
+		} else {
+			handlePositionalArg(result, arg);
+		}
+
+		i++;
+	}
+
+	return { parsed: result, unknownFlags };
+}
+
+function printHelp(): void {
+	console.log(`md - Markdown file indexer and search CLI
+
+USAGE:
+  md <command> [options]
+
+COMMANDS:
+  search <query>     Search indexed markdown content
+  search index       Build/rebuild the search index
+  search status      Check Meilisearch connection and index status
+  mcp [path]         Start MCP server for AI assistant integration
+
+GLOBAL OPTIONS:
+  -h, --help         Show this help message
+  -v, --version      Show version number
+  --verbose          Enable verbose output
+  --json             Output in JSON format
+  --xml              Output in XML format
+  --path <dir>       Directory to search/index (default: current directory)
+
+SEARCH OPTIONS:
+  --limit <n>        Maximum results to return (default: 10)
+  --labels <list>    Filter by labels (comma-separated, OR logic)
+  --author <email>   Filter by author email
+  --created-after <date>   Filter: created after date (YYYY-MM-DD)
+  --created-before <date>  Filter: created before date (YYYY-MM-DD)
+  --created-within <dur>   Filter: created within duration (e.g., 30d, 2w, 3m, 1y)
+  --updated-after <date>   Filter: updated after date (YYYY-MM-DD)
+  --updated-before <date>  Filter: updated before date (YYYY-MM-DD)
+  --updated-within <dur>   Filter: updated within duration (e.g., 7d, 2w, 1m)
+  --stale <dur>            Filter: NOT updated within duration (find stale content)
+  --sort <field>           Sort order: created_at, -created_at, updated_at, -updated_at
+
+EXAMPLES:
+  md search "authentication"
+  md search "" --labels api,docs --limit 5
+  md search "old" --stale 90d
+  md search index --path ~/docs
+  md search status
+  md mcp ~/docs
+`);
+}
+
+function printVersion(): void {
+	console.log(`md version ${VERSION}`);
+}
+
+function getOutputFormat(options: ParsedArgs['options']): 'human' | 'json' | 'xml' {
+	if (options.json) return 'json';
+	if (options.xml) return 'xml';
+	return 'human';
+}
+
+async function handleSearchCommand(
+	parsed: ParsedArgs,
+	basePath: string,
+	formatter: ReturnType<typeof getFormatter>,
+): Promise<void> {
+	if (parsed.subcommand === 'index') {
+		const result = await runSearchIndexCommand(basePath, parsed.options.verbose);
+		console.log(formatter.format(result));
+		return;
+	}
+
+	if (parsed.subcommand === 'status') {
+		const result = await runSearchStatusCommand(basePath);
+		console.log(formatter.format(result));
+		return;
+	}
+
+	const query = parsed.positional[0] ?? '';
+	const result = await runSearchCommand(basePath, {
+		query,
+		limit: parsed.options.limit,
+		labels: parsed.options.labels,
+		author: parsed.options.author,
+		createdAfter: parsed.options.createdAfter,
+		createdBefore: parsed.options.createdBefore,
+		createdWithin: parsed.options.createdWithin,
+		updatedAfter: parsed.options.updatedAfter,
+		updatedBefore: parsed.options.updatedBefore,
+		updatedWithin: parsed.options.updatedWithin,
+		stale: parsed.options.stale,
+		sort: parsed.options.sort as 'created_at' | '-created_at' | 'updated_at' | '-updated_at',
+	});
+	console.log(formatter.format(result.results));
+}
+
+function handleError(error: unknown, formatter: ReturnType<typeof getFormatter>): never {
+	if (error && typeof error === 'object' && '_tag' in error) {
+		const mdError = error as MdError;
+		console.error(formatter.formatError({ message: mdError.message }));
+		process.exit(getExitCode(mdError));
+	}
+
+	console.error(formatter.formatError(error instanceof Error ? error : { message: String(error) }));
+	process.exit(EXIT_CODES.GENERAL_ERROR);
+}
+
+export async function run(args: string[]): Promise<void> {
+	const { parsed, unknownFlags } = parseArgs(args);
+
+	if (parsed.options.version) {
+		printVersion();
+		process.exit(EXIT_CODES.SUCCESS);
+	}
+
+	if (parsed.options.help || !parsed.command) {
+		printHelp();
+		process.exit(parsed.options.help ? EXIT_CODES.SUCCESS : EXIT_CODES.INVALID_ARGS);
+	}
+
+	// Warn about unknown flags
+	if (unknownFlags.length > 0) {
+		console.error(`Warning: Unknown flag(s): ${unknownFlags.join(', ')}`);
+	}
+
+	const formatter = getFormatter(getOutputFormat(parsed.options));
+	const basePath = parsed.options.path ?? process.cwd();
+
+	try {
+		switch (parsed.command) {
+			case 'search':
+				await handleSearchCommand(parsed, basePath, formatter);
+				break;
+
+			case 'mcp':
+				await runMcpCommand(parsed.positional[0] ?? basePath);
+				break;
+
+			default:
+				console.error(formatter.formatError({ message: `Unknown command: ${parsed.command}` }));
+				printHelp();
+				process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+	} catch (error) {
+		handleError(error, formatter);
+	}
+}

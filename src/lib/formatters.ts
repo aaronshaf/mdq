@@ -111,8 +111,12 @@ export class XmlFormatter implements Formatter {
 		if (typeof data === 'object') {
 			const obj = data as Record<string, unknown>;
 			const children = Object.entries(obj)
+				.filter(([, value]) => value !== undefined && value !== null)
 				.map(([key, value]) => {
 					if (Array.isArray(value)) {
+						if (value.length === 0) {
+							return `${childIndent}<${key}/>`;
+						}
 						const items = value
 							.map((v) => `${childIndent}  <item>${this.escapeXml(String(v))}</item>`)
 							.join('\n');

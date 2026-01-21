@@ -115,8 +115,18 @@ export class SearchClient {
 		try {
 			const doc = await index.getDocument(id);
 			return doc as SearchDocument;
-		} catch {
-			return null;
+		} catch (error) {
+			// Meilisearch returns a MeiliSearchApiError with code for not found
+			if (
+				error &&
+				typeof error === 'object' &&
+				'code' in error &&
+				error.code === 'document_not_found'
+			) {
+				return null;
+			}
+			// Re-throw unexpected errors
+			throw error;
 		}
 	}
 

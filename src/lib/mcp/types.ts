@@ -4,6 +4,7 @@ import type { SearchDocument, SearchResult } from '../search/types.js';
 export interface SearchToolInput {
 	query: string;
 	limit?: number;
+	source?: string;
 	labels?: string[];
 	author?: string;
 	created_after?: string;
@@ -16,14 +17,21 @@ export interface SearchToolInput {
 	sort?: 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
 }
 
+export interface SearchResultWithSource extends SearchResult {
+	source: string;
+}
+
 export interface SearchToolOutput {
-	results: SearchResult[];
+	results: SearchResultWithSource[];
 	total: number;
 }
 
 export interface ReadToolInput {
 	path?: string;
 	id?: string;
+	source?: string;
 }
 
-export type ReadToolOutput = SearchDocument;
+export interface ReadToolOutput extends SearchDocument {
+	source: string;
+}

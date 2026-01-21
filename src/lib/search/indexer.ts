@@ -65,23 +65,33 @@ export async function scanMarkdownFiles(basePath: string): Promise<string[]> {
 	return files;
 }
 
-async function parseFileToDocument(file: string, basePath: string): Promise<SearchDocument | null> {
+interface ParseResult {
+	document: SearchDocument | null;
+	error?: string;
+}
+
+async function parseFileToDocument(file: string, basePath: string): Promise<ParseResult> {
 	try {
 		const parsed = await parseMarkdownFile(file, basePath);
 		const stat = await Bun.file(file).stat();
 
 		return {
-			id: parsed.id,
-			title: parsed.title,
-			content: parsed.content,
-			path: parsed.path,
-			labels: parsed.frontmatter.labels,
-			author_email: parsed.frontmatter.author_email,
-			created_at: stat ? stat.birthtime.getTime() : undefined,
-			updated_at: stat ? stat.mtime.getTime() : undefined,
+			document: {
+				id: parsed.id,
+				title: parsed.title,
+				content: parsed.content,
+				path: parsed.path,
+				labels: parsed.frontmatter.labels,
+				author_email: parsed.frontmatter.author_email,
+				created_at: stat ? stat.birthtime.getTime() : undefined,
+				updated_at: stat ? stat.mtime.getTime() : undefined,
+			},
 		};
-	} catch {
-		return null;
+	} catch (error) {
+		return {
+			document: null,
+			error: error instanceof Error ? error.message : String(error),
+		};
 	}
 }
 
@@ -94,13 +104,13 @@ async function parseAllFiles(
 	let errors = 0;
 
 	for (const file of files) {
-		const doc = await parseFileToDocument(file, basePath);
-		if (doc) {
-			documents.push(doc);
+		const result = await parseFileToDocument(file, basePath);
+		if (result.document) {
+			documents.push(result.document);
 		} else {
 			errors++;
 			if (verbose) {
-				console.error(`Error parsing ${file}`);
+				console.error(`Error parsing ${file}: ${result.error ?? 'Unknown error'}`);
 			}
 		}
 	}

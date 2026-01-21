@@ -1,5 +1,6 @@
 import { EXIT_CODES, type MdError, getExitCode } from '../lib/errors.js';
 import { getFormatter } from '../lib/formatters.js';
+import { parseSources } from '../lib/mcp/sources.js';
 import { runMcpCommand } from './commands/mcp.js';
 import {
 	runSearchCommand,
@@ -32,7 +33,7 @@ interface ParsedArgs {
 		updatedBefore?: string;
 		updatedWithin?: string;
 		stale?: string;
-		sort?: string;
+		sort?: SortValue;
 	};
 }
 
@@ -48,6 +49,14 @@ type StringFlag =
 	| 'updatedWithin'
 	| 'stale'
 	| 'sort';
+
+type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
+const VALID_SORT_VALUES = new Set<string>([
+	'created_at',
+	'-created_at',
+	'updated_at',
+	'-updated_at',
+]);
 
 const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--help': 'help',
@@ -69,7 +78,6 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--updated-before': 'updatedBefore',
 	'--updated-within': 'updatedWithin',
 	'--stale': 'stale',
-	'--sort': 'sort',
 };
 
 function handlePositionalArg(result: ParsedArgs, arg: string): void {
@@ -104,18 +112,35 @@ function tryParseFlag(
 
 	const strFlag = STRING_FLAGS[arg];
 	if (strFlag && nextArg !== undefined) {
-		options[strFlag] = nextArg;
+		// All StringFlag keys map to string | undefined in options
+		(options as Record<StringFlag, string | undefined>)[strFlag] = nextArg;
 		return 2;
 	}
 
 	if (arg === '--limit' && nextArg !== undefined) {
-		options.limit = Number.parseInt(nextArg, 10);
+		const limit = Number.parseInt(nextArg, 10);
+		if (Number.isNaN(limit) || limit < 1 || limit > 100) {
+			console.error('Error: --limit must be a number between 1 and 100');
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.limit = limit;
 		return 2;
 	}
 
 	if (arg === '--labels' && nextArg !== undefined) {
 		options.labels = options.labels ?? [];
 		options.labels.push(...nextArg.split(',').map((l) => l.trim()));
+		return 2;
+	}
+
+	if (arg === '--sort' && nextArg !== undefined) {
+		if (!VALID_SORT_VALUES.has(nextArg)) {
+			console.error(
+				'Error: --sort must be one of: created_at, -created_at, updated_at, -updated_at',
+			);
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.sort = nextArg as SortValue;
 		return 2;
 	}
 
@@ -168,7 +193,7 @@ COMMANDS:
   search <query>     Search indexed markdown content
   search index       Build/rebuild the search index
   search status      Check Meilisearch connection and index status
-  mcp [path]         Start MCP server for AI assistant integration
+  mcp [sources...]   Start MCP server for AI assistant integration
 
 GLOBAL OPTIONS:
   -h, --help         Show this help message
@@ -198,6 +223,8 @@ EXAMPLES:
   md search index --path ~/docs
   md search status
   md mcp ~/docs
+  md mcp ~/docs/confluence ~/docs/notes
+  md mcp confluence:~/docs/confluence notes:~/my-notes
 `);
 }
 
@@ -241,7 +268,7 @@ async function handleSearchCommand(
 		updatedBefore: parsed.options.updatedBefore,
 		updatedWithin: parsed.options.updatedWithin,
 		stale: parsed.options.stale,
-		sort: parsed.options.sort as 'created_at' | '-created_at' | 'updated_at' | '-updated_at',
+		sort: parsed.options.sort,
 	});
 	console.log(formatter.format(result.results));
 }
@@ -284,9 +311,26 @@ export async function run(args: string[]): Promise<void> {
 				await handleSearchCommand(parsed, basePath, formatter);
 				break;
 
-			case 'mcp':
-				await runMcpCommand(parsed.positional[0] ?? basePath);
+			case 'mcp': {
+				// Parse source arguments (or use cwd as default)
+				const sourceArgs = parsed.positional.length > 0 ? parsed.positional : [basePath];
+				const { sources, errors } = parseSources(sourceArgs);
+
+				if (errors.length > 0) {
+					for (const error of errors) {
+						console.error(`Error: ${error}`);
+					}
+					process.exit(EXIT_CODES.INVALID_ARGS);
+				}
+
+				if (sources.length === 0) {
+					console.error('Error: No valid sources provided');
+					process.exit(EXIT_CODES.INVALID_ARGS);
+				}
+
+				await runMcpCommand(sources);
 				break;
+			}
 
 			default:
 				console.error(formatter.formatError({ message: `Unknown command: ${parsed.command}` }));

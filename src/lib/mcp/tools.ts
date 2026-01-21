@@ -6,6 +6,9 @@ export const SearchToolParams = Schema.Struct({
 		Schema.Int.pipe(Schema.greaterThanOrEqualTo(1), Schema.lessThanOrEqualTo(100)),
 		{ default: () => 10 },
 	).annotations({ description: 'Maximum results to return' }),
+	source: Schema.optional(Schema.String).annotations({
+		description: 'Filter by source name (omit to search all sources)',
+	}),
 	labels: Schema.optional(Schema.Array(Schema.String)).annotations({
 		description: 'Filter by labels (OR logic)',
 	}),
@@ -36,14 +39,29 @@ export const SearchToolParams = Schema.Struct({
 	).annotations({ description: 'Sort order (prefix with - for descending)' }),
 });
 
-export const ReadToolParams = Schema.Struct({
+const ReadToolParamsBase = Schema.Struct({
 	path: Schema.optional(Schema.String).annotations({
 		description: 'Relative path to the markdown file (e.g., "getting-started/authentication.md")',
 	}),
 	id: Schema.optional(Schema.String).annotations({
 		description: 'Page ID from frontmatter or search results',
 	}),
+	source: Schema.optional(Schema.String).annotations({
+		description: 'Source name (required if multiple sources have pages with same path/id)',
+	}),
 });
+
+export const ReadToolParams = ReadToolParamsBase.pipe(
+	Schema.filter((params) => {
+		if (!params.path && !params.id) {
+			return {
+				path: ['path'],
+				message: 'Either path or id must be provided',
+			};
+		}
+		return undefined;
+	}),
+);
 
 export type SearchToolParams = typeof SearchToolParams.Type;
 export type ReadToolParams = typeof ReadToolParams.Type;

@@ -92,18 +92,21 @@ Found 3 results for "authentication"
 **Output (XML):**
 
 ```xml
-<search-results query="authentication" count="3">
-  <result rank="1">
+<result>
+  <item>
+    <id>getting-started-authentication</id>
     <title>Authentication Guide</title>
     <path>getting-started/authentication.md</path>
-    <labels>
-      <label>documentation</label>
-      <label>security</label>
-    </labels>
     <snippet>...handles OAuth2 authentication flows for the API...</snippet>
-  </result>
-  <!-- ... -->
-</search-results>
+    <labels>
+      <item>documentation</item>
+      <item>security</item>
+    </labels>
+    <author_email>user@example.com</author_email>
+    <created_at>1769018471085</created_at>
+    <updated_at>1769018471085</updated_at>
+  </item>
+</result>
 ```
 
 ### md search index

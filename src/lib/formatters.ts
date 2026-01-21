@@ -92,17 +92,20 @@ export class JsonFormatter implements Formatter {
 
 export class XmlFormatter implements Formatter {
 	format(data: unknown): string {
-		return this.toXml(data, 'result');
+		return this.toXml(data, 'result', 0);
 	}
 
-	private toXml(data: unknown, rootName: string): string {
+	private toXml(data: unknown, rootName: string, depth: number): string {
+		const indent = '  '.repeat(depth);
+		const childIndent = '  '.repeat(depth + 1);
+
 		if (data === null || data === undefined) {
-			return `<${rootName}/>`;
+			return `${indent}<${rootName}/>`;
 		}
 
 		if (Array.isArray(data)) {
-			const items = data.map((item) => this.toXml(item, 'item')).join('\n');
-			return `<${rootName}>\n${items}\n</${rootName}>`;
+			const items = data.map((item) => this.toXml(item, 'item', depth + 1)).join('\n');
+			return `${indent}<${rootName}>\n${items}\n${indent}</${rootName}>`;
 		}
 
 		if (typeof data === 'object') {
@@ -110,19 +113,21 @@ export class XmlFormatter implements Formatter {
 			const children = Object.entries(obj)
 				.map(([key, value]) => {
 					if (Array.isArray(value)) {
-						const items = value.map((v) => `<item>${this.escapeXml(String(v))}</item>`).join('');
-						return `<${key}>${items}</${key}>`;
+						const items = value
+							.map((v) => `${childIndent}  <item>${this.escapeXml(String(v))}</item>`)
+							.join('\n');
+						return `${childIndent}<${key}>\n${items}\n${childIndent}</${key}>`;
 					}
 					if (typeof value === 'object' && value !== null) {
-						return this.toXml(value, key);
+						return this.toXml(value, key, depth + 1);
 					}
-					return `<${key}>${this.escapeXml(String(value))}</${key}>`;
+					return `${childIndent}<${key}>${this.escapeXml(String(value))}</${key}>`;
 				})
 				.join('\n');
-			return `<${rootName}>\n${children}\n</${rootName}>`;
+			return `${indent}<${rootName}>\n${children}\n${indent}</${rootName}>`;
 		}
 
-		return `<${rootName}>${this.escapeXml(String(data))}</${rootName}>`;
+		return `${indent}<${rootName}>${this.escapeXml(String(data))}</${rootName}>`;
 	}
 
 	private escapeXml(str: string): string {

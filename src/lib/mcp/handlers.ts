@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { parseMarkdownFile } from '../markdown/index.js';
-import { createSearchClient, deriveIndexName } from '../search/index.js';
+import { type SearchClient, deriveIndexName } from '../search/index.js';
 import type { Source } from './sources.js';
 import type {
 	ReadToolInput,
@@ -42,10 +42,9 @@ interface SourceSearchResult {
 export async function handleSearch(
 	sources: Source[],
 	sourceMap: Map<string, Source>,
+	client: SearchClient,
 	input: SearchToolInput,
 ): Promise<SearchToolOutput> {
-	const client = createSearchClient();
-
 	// Determine which sources to search
 	let sourcesToSearch: Source[];
 	if (input.source) {
@@ -144,14 +143,13 @@ export async function handleSearch(
 export async function handleRead(
 	sources: Source[],
 	sourceMap: Map<string, Source>,
+	client: SearchClient,
 	input: ReadToolInput,
 ): Promise<ReadToolOutput | null> {
 	// Validate that at least one identifier is provided
 	if (!input.path && !input.id) {
 		return null;
 	}
-
-	const client = createSearchClient();
 
 	// Determine which sources to search
 	let sourcesToSearch: Source[];

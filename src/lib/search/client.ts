@@ -130,6 +130,18 @@ export class SearchClient {
 		}
 	}
 
+	async checkHealth(): Promise<{ healthy: boolean; message: string }> {
+		try {
+			await this.client.health();
+			return { healthy: true, message: 'Meilisearch is running' };
+		} catch (error) {
+			return {
+				healthy: false,
+				message: `Cannot connect to Meilisearch: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			};
+		}
+	}
+
 	async getStatus(indexName: string): Promise<IndexStatus> {
 		try {
 			await this.client.health();

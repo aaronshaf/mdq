@@ -150,8 +150,29 @@ describe('parseSources', () => {
 		expect(sources[1]!.name).toBe('notes');
 	});
 
-	test('detects name collisions', () => {
+	test('auto-resolves derived name collisions', () => {
 		const { sources, errors } = parseSources(['/docs/notes', '/other/notes']);
+		expect(errors).toHaveLength(0);
+		expect(sources).toHaveLength(2);
+		expect(sources[0]!.name).toBe('notes');
+		expect(sources[1]!.name).toBe('other-notes'); // Auto-resolved with parent
+	});
+
+	test('auto-resolves multiple collisions with deeper paths', () => {
+		const { sources, errors } = parseSources([
+			'/work/project/docs',
+			'/personal/project/docs',
+			'/archive/project/docs',
+		]);
+		expect(errors).toHaveLength(0);
+		expect(sources).toHaveLength(3);
+		expect(sources[0]!.name).toBe('docs');
+		expect(sources[1]!.name).toBe('project-docs'); // One parent is enough
+		expect(sources[2]!.name).toBe('archive-project-docs'); // Needs two parents
+	});
+
+	test('errors on explicit name collisions', () => {
+		const { sources, errors } = parseSources(['notes:/docs/notes', 'notes:/other/notes']);
 		expect(errors).toHaveLength(1);
 		expect(errors[0]).toContain('collision');
 		expect(errors[0]).toContain('notes');
@@ -175,6 +196,22 @@ describe('parseSources', () => {
 		expect(sources).toHaveLength(2);
 		expect(sources[0]!.name).toBe('confluence');
 		expect(sources[1]!.name).toBe('notes');
+	});
+
+	test('auto-resolves when derived name would collide with explicit name', () => {
+		// First two have basename "docs", third has explicit name "project-docs"
+		// When resolving the second "docs", it would normally become "project-docs"
+		// but that's taken by the explicit name, so it must resolve further
+		const { sources, errors } = parseSources([
+			'/work/project/docs',
+			'project-docs:/explicit/path', // Takes the name the next source would resolve to
+			'/other/project/docs', // Would resolve to "project-docs" but that's taken
+		]);
+		expect(errors).toHaveLength(0);
+		expect(sources).toHaveLength(3);
+		expect(sources[0]!.name).toBe('docs');
+		expect(sources[1]!.name).toBe('project-docs'); // Explicit
+		expect(sources[2]!.name).toBe('other-project-docs'); // Must skip past "project-docs"
 	});
 
 	test('rejects empty source name from explicit syntax', () => {

@@ -37,10 +37,11 @@ md search "query"
 ## CLI
 
 ```
+md status             Check if Meilisearch is running
 md search <query>     Search indexed content
 md search index       Build/rebuild index (always full reindex)
-md search status      Check Meilisearch connection
-md mcp [path]         Start MCP server
+md search status      Check index status
+md mcp [sources...]   Start MCP server
 ```
 
 ### Options
@@ -63,6 +64,10 @@ md mcp [path]         Start MCP server
 --updated-within      Duration filter
 --stale <dur>         NOT updated within duration
 --sort <field>        created_at, -created_at, updated_at, -updated_at
+
+# MCP options
+-s, --source <path>   Add source directory (can use name:path format)
+-d, --desc <text>     Description for preceding source
 ```
 
 ### Examples
@@ -98,20 +103,22 @@ md mcp ~/docs
 ### Source Formats
 
 ```bash
-# Path only (name derived from directory)
+# Single directory
 md mcp ~/docs
 
-# Explicit name
-md mcp wiki:~/docs
+# Multiple directories (names auto-derived, collisions auto-resolved)
+md mcp ~/docs ~/wiki ~/notes
 
-# With description (helps Claude know when to search each source)
-md mcp "wiki:~/docs|Team knowledge base and documentation"
+# With descriptions using -s/-d flags (recommended)
+md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
-# Multiple sources with descriptions
-md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
+# Explicit names to avoid collisions
+md mcp -s work:~/work/docs -d "Work documentation" -s personal:~/docs -d "Personal notes"
 ```
 
-> **Note:** `~` is expanded to your home directory. The `|` character is reserved for descriptions and cannot be used in paths.
+> **Note:** `~` is expanded to your home directory. Descriptions help Claude know *when* to search each source.
+
+**Name collisions:** Derived names (from directory basename) auto-resolve by adding parent path segments. Explicit names (e.g., `wiki:~/path`) error on collision.
 
 ### Tools
 
@@ -123,10 +130,16 @@ md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
 
 ```bash
 # Single directory
-claude mcp add my-docs -- md mcp ~/docs
+claude mcp add kb -- md mcp ~/docs
 
-# Multiple directories with descriptions (JSON is more reliable for complex args)
-claude mcp add-json knowledge-bases --scope user '{"command": "md", "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team knowledge base"]}'
+# Multiple directories
+claude mcp add kb -- md mcp ~/docs ~/wiki ~/notes
+
+# With descriptions (recommended)
+claude mcp add kb -- md mcp \
+  -s ~/notes -d "Personal journal" \
+  -s ~/wiki -d "Team knowledge base" \
+  -s ~/inst/eng -d "Engineering docs and RFCs"
 ```
 
 **Scope options:**
@@ -138,8 +151,8 @@ claude mcp add-json knowledge-bases --scope user '{"command": "md", "args": ["mc
 
 ```bash
 claude mcp list          # view all
-claude mcp get md        # get details
-claude mcp remove md     # remove
+claude mcp get kb        # get details
+claude mcp remove kb     # remove
 ```
 
 ### Claude Desktop
@@ -149,9 +162,9 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "md": {
+    "kb": {
       "command": "md",
-      "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team docs"]
+      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal", "-s", "~/wiki", "-d", "Team docs"]
     }
   }
 }

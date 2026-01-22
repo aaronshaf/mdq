@@ -6,16 +6,23 @@ import {
 	runSearchCommand,
 	runSearchIndexCommand,
 	runSearchStatusCommand,
+	runStatusCommand,
 } from './commands/search.js';
 
 // Read version at module load time - Bun resolves JSON imports synchronously
 import packageJson from '../../package.json';
 const VERSION = packageJson.version;
 
+interface McpSourceArg {
+	source: string;
+	desc?: string;
+}
+
 interface ParsedArgs {
 	command: string;
 	subcommand?: string;
 	positional: string[];
+	mcpSources: McpSourceArg[];
 	options: {
 		help: boolean;
 		version: boolean;
@@ -151,6 +158,7 @@ function parseArgs(args: string[]): ParseResult {
 	const result: ParsedArgs = {
 		command: '',
 		positional: [],
+		mcpSources: [],
 		options: {
 			help: false,
 			version: false,
@@ -168,6 +176,36 @@ function parseArgs(args: string[]): ParseResult {
 
 		if (consumed > 0) {
 			i += consumed;
+			continue;
+		}
+
+		// Handle MCP source flags: -s/--source and -d/--desc
+		if (arg === '-s' || arg === '--source') {
+			const value = args[i + 1];
+			if (!value || value.startsWith('-')) {
+				console.error('Error: -s/--source requires a path argument');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+			result.mcpSources.push({ source: value });
+			i += 2;
+			continue;
+		}
+
+		if (arg === '-d' || arg === '--desc') {
+			const value = args[i + 1];
+			if (!value) {
+				console.error('Error: -d/--desc requires a description argument');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+			// Attach description to the most recent source
+			const lastSource = result.mcpSources[result.mcpSources.length - 1];
+			if (lastSource) {
+				lastSource.desc = value;
+			} else {
+				console.error('Error: -d/--desc must follow a -s/--source flag');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+			i += 2;
 			continue;
 		}
 
@@ -190,6 +228,7 @@ USAGE:
   md <command> [options]
 
 COMMANDS:
+  status             Check if Meilisearch is running
   search <query>     Search indexed markdown content
   search index       Build/rebuild the search index
   search status      Check Meilisearch connection and index status
@@ -216,15 +255,21 @@ SEARCH OPTIONS:
   --stale <dur>            Filter: NOT updated within duration (find stale content)
   --sort <field>           Sort order: created_at, -created_at, updated_at, -updated_at
 
+MCP OPTIONS:
+  -s, --source <path>      Add a source directory (can use name:path format)
+  -d, --desc <text>        Description for the preceding source (helps AI know when to search)
+
 EXAMPLES:
+  md status
   md search "authentication"
   md search "" --labels api,docs --limit 5
   md search "old" --stale 90d
   md search index --path ~/docs
   md search status
   md mcp ~/docs
-  md mcp ~/docs/confluence ~/docs/notes
-  md mcp confluence:~/docs/confluence notes:~/my-notes
+  md mcp ~/docs ~/wiki ~/notes
+  md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+  md mcp -s notes:~/notes -d "Journal" -s eng:~/inst/eng -d "Engineering docs"
 `);
 }
 
@@ -307,14 +352,36 @@ export async function run(args: string[]): Promise<void> {
 
 	try {
 		switch (parsed.command) {
+			case 'status': {
+				const result = await runStatusCommand();
+				console.log(formatter.format(result));
+				if (!result.healthy) {
+					process.exit(EXIT_CODES.CONNECTION_ERROR);
+				}
+				break;
+			}
+
 			case 'search':
 				await handleSearchCommand(parsed, basePath, formatter);
 				break;
 
 			case 'mcp': {
-				// Parse source arguments (or use cwd as default)
-				const sourceArgs = parsed.positional.length > 0 ? parsed.positional : [basePath];
-				const { sources, errors } = parseSources(sourceArgs);
+				// Build source args from -s/-d flags and positional args
+				// Flag-based sources: -s path -d "description"
+				// Positional sources: path or name:path or "name:path|description"
+				const sourceArgs: string[] = [];
+
+				// Add flag-based sources (convert to "path|description" format)
+				for (const { source, desc } of parsed.mcpSources) {
+					sourceArgs.push(desc ? `${source}|${desc}` : source);
+				}
+
+				// Add positional sources
+				sourceArgs.push(...parsed.positional);
+
+				// Default to cwd if no sources specified
+				const finalSourceArgs = sourceArgs.length > 0 ? sourceArgs : [basePath];
+				const { sources, errors } = parseSources(finalSourceArgs);
 
 				if (errors.length > 0) {
 					for (const error of errors) {

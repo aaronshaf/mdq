@@ -53,3 +53,8 @@ export async function runSearchStatusCommand(basePath: string): Promise<IndexSta
 
 	return client.getStatus(indexName);
 }
+
+export async function runStatusCommand(): Promise<{ healthy: boolean; message: string }> {
+	const client = createSearchClient();
+	return client.checkHealth();
+}

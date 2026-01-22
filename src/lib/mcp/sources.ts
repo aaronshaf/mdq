@@ -34,6 +34,10 @@ function isWindowsDriveLetter(arg: string, colonIndex: number): boolean {
 	return charAfterColon === '\\' || charAfterColon === '/' || charAfterColon === undefined;
 }
 
+interface ParsedSource extends Source {
+	hasExplicitName: boolean;
+}
+
 /**
  * Parse source arguments into Source objects.
  * Supports formats:
@@ -46,7 +50,7 @@ function isWindowsDriveLetter(arg: string, colonIndex: number): boolean {
  *   - `~` is expanded to user's home directory
  *   - `|` is reserved for descriptions (cannot be used in paths)
  */
-export function parseSourceArg(arg: string): Source {
+export function parseSourceArg(arg: string): ParsedSource {
 	// First, split off the description (if present) using pipe delimiter
 	const pipeIndex = arg.indexOf('|');
 	let pathPart: string;
@@ -73,6 +77,7 @@ export function parseSourceArg(arg: string): Source {
 			name,
 			path: path.resolve(sourcePath),
 			description,
+			hasExplicitName: true,
 		};
 	}
 
@@ -84,37 +89,79 @@ export function parseSourceArg(arg: string): Source {
 		name,
 		path: resolvedPath,
 		description,
+		hasExplicitName: false,
 	};
 }
 
 /**
- * Parse multiple source arguments and check for collisions.
+ * Derive a unique name by adding parent path segments.
+ * E.g., /home/user/work/docs -> work-docs -> user-work-docs
+ */
+function deriveUniqueName(sourcePath: string, existingNames: Set<string>): string {
+	const segments = sourcePath.split(path.sep).filter(Boolean);
+	let name = '';
+
+	// Build name from end of path, adding segments until unique
+	for (let i = segments.length - 1; i >= 0; i--) {
+		const segment = segments[i]!.toLowerCase();
+		name = name ? `${segment}-${name}` : segment;
+
+		if (!existingNames.has(name)) {
+			return name;
+		}
+	}
+
+	// If still not unique (same full path?), return the full name
+	return name;
+}
+
+/**
+ * Parse multiple source arguments and auto-resolve name collisions.
+ * Explicit names still error on collision; derived names are auto-resolved.
  */
 export function parseSources(args: string[]): ParseSourcesResult {
-	const sources: Source[] = [];
 	const errors: string[] = [];
-	const seenNames = new Map<string, string>(); // name -> original path
 
+	// First pass: parse all sources
+	const parsed: ParsedSource[] = [];
 	for (const arg of args) {
 		const source = parseSourceArg(arg);
 
-		// Validate non-empty name
 		if (!source.name) {
 			errors.push(`Invalid source: "${arg}" - source name cannot be empty`);
 			continue;
 		}
 
-		// Check for name collision
-		const existingPath = seenNames.get(source.name);
-		if (existingPath) {
-			errors.push(
-				`Source name collision: "${source.name}" is used by both "${existingPath}" and "${source.path}"`,
-			);
-			continue;
-		}
+		parsed.push(source);
+	}
 
-		seenNames.set(source.name, source.path);
-		sources.push(source);
+	// Second pass: detect collisions and auto-resolve derived names
+	const finalNames = new Map<string, string>(); // name -> path (for explicit collision detection)
+	const usedNames = new Set<string>();
+	const sources: Source[] = [];
+
+	for (const source of parsed) {
+		if (source.hasExplicitName) {
+			// Explicit names: error on collision
+			const existingPath = finalNames.get(source.name);
+			if (existingPath) {
+				errors.push(
+					`Source name collision: "${source.name}" is used by both "${existingPath}" and "${source.path}"`,
+				);
+				continue;
+			}
+			finalNames.set(source.name, source.path);
+			usedNames.add(source.name);
+			sources.push({ name: source.name, path: source.path, description: source.description });
+		} else {
+			// Derived names: auto-resolve collisions
+			let name = source.name;
+			if (usedNames.has(name)) {
+				name = deriveUniqueName(source.path, usedNames);
+			}
+			usedNames.add(name);
+			sources.push({ name, path: source.path, description: source.description });
+		}
 	}
 
 	return { sources, errors };

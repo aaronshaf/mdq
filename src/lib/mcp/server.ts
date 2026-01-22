@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import packageJson from '../../../package.json';
+import type { SearchClient } from '../search/index.js';
 import { handleRead, handleSearch } from './handlers.js';
 import type { Source } from './sources.js';
 import {
@@ -15,7 +16,10 @@ export interface MdMcpServer {
 	close(): Promise<void>;
 }
 
-export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
+export async function createMcpServer(
+	sources: Source[],
+	client: SearchClient,
+): Promise<MdMcpServer> {
 	const server = new McpServer({
 		name: 'md',
 		version: packageJson.version,
@@ -56,7 +60,7 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 				}
 
 				const parsed = parseResult.data;
-				const result = await handleSearch(sources, sourceMap, {
+				const result = await handleSearch(sources, sourceMap, client, {
 					query: parsed.query,
 					limit: parsed.limit,
 					labels: parsed.labels ? [...parsed.labels] : undefined,
@@ -104,7 +108,7 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 				}
 
 				const parsed = parseResult.data;
-				const result = await handleRead(sources, sourceMap, {
+				const result = await handleRead(sources, sourceMap, client, {
 					path: parsed.path,
 					id: parsed.id,
 					source: parsed.source,

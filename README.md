@@ -81,22 +81,69 @@ ID derivation: `frontmatter.page_id` > sanitized path (e.g., `docs-api-auth`)
 md mcp ~/docs
 ```
 
+### Source Formats
+
+```bash
+# Path only (name derived from directory)
+md mcp ~/docs
+
+# Explicit name
+md mcp wiki:~/docs
+
+# With description (helps Claude know when to search each source)
+md mcp "wiki:~/docs|Team knowledge base and documentation"
+
+# Multiple sources with descriptions
+md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
+```
+
+> **Note:** `~` is expanded to your home directory. The `|` character is reserved for descriptions and cannot be used in paths.
+
 ### Tools
 
 **search** - Query with filters, returns snippets (200 chars)
 
 **read_page** - Read full content by `path` or `id`
 
-### Claude Desktop Config
+### Claude Code CLI
 
-`~/Library/Application Support/Claude/claude_desktop_config.json`:
+```bash
+# Single directory
+claude mcp add md -- md mcp ~/docs
+
+# Multiple directories with descriptions
+claude mcp add md -- md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
+```
+
+Or with JSON:
+
+```bash
+claude mcp add-json md '{"command": "md", "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team docs"]}'
+```
+
+**Scope options:**
+- `--scope local` (default) - just this project
+- `--scope user` - all your projects
+- `--scope project` - shared via `.mcp.json`
+
+**Management:**
+
+```bash
+claude mcp list          # view all
+claude mcp get md        # get details
+claude mcp remove md     # remove
+```
+
+### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "md": {
-      "command": "bun",
-      "args": ["run", "/path/to/md/src/cli.ts", "mcp", "/path/to/docs"]
+      "command": "md",
+      "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team docs"]
     }
   }
 }

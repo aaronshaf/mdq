@@ -23,12 +23,25 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 
 	// Build source map for quick lookup (keys are lowercased for case-insensitive lookup)
 	const sourceMap = new Map(sources.map((s) => [s.name.toLowerCase(), s]));
-	const sourceNames = sources.map((s) => s.name);
+
+	// Format source list for tool descriptions
+	const formatSourceList = (): string => {
+		if (sources.length <= 1) return '';
+		const hasDescriptions = sources.some((s) => s.description);
+		if (hasDescriptions) {
+			const sourceLines = sources.map((s) =>
+				s.description ? `- ${s.name}: ${s.description}` : `- ${s.name}`,
+			);
+			return `\n\nAvailable sources:\n${sourceLines.join('\n')}`;
+		}
+		return ` Available sources: ${sources.map((s) => s.name).join(', ')}`;
+	};
+	const sourceList = formatSourceList();
 
 	// Register search tool
 	server.tool(
 		'search',
-		`Search indexed Markdown content. Returns matching pages with snippets.${sources.length > 1 ? ` Available sources: ${sourceNames.join(', ')}` : ''}`,
+		`Search indexed Markdown content. Returns matching pages with snippets.${sourceList}`,
 		SearchToolParamsJsonSchema,
 		async (params) => {
 			try {
@@ -76,7 +89,7 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 	// Register read tool
 	server.tool(
 		'read_page',
-		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous. Available sources: ${sourceNames.join(', ')}` : ''}`,
+		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous.${sourceList}` : ''}`,
 		ReadToolParamsJsonSchema,
 		async (params) => {
 			try {
@@ -122,7 +135,11 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 
 	return {
 		async start() {
-			const sourceList = sources.map((s) => `${s.name}:${s.path}`).join(', ');
+			const sourceList = sources
+				.map((s) =>
+					s.description ? `${s.name}:${s.path} (${s.description})` : `${s.name}:${s.path}`,
+				)
+				.join(', ');
 			console.error(`[md] Starting MCP server for sources: ${sourceList}`);
 			await server.connect(transport);
 			console.error('[md] MCP server connected');

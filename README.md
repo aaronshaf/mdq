@@ -119,16 +119,10 @@ md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
 
 ```bash
 # Single directory
-claude mcp add md -- md mcp ~/docs
+claude mcp add my-docs -- md mcp ~/docs
 
-# Multiple directories with descriptions
-claude mcp add md -- md mcp "notes:~/notes|Personal journal" "wiki:~/wiki|Team docs"
-```
-
-Or with JSON:
-
-```bash
-claude mcp add-json md '{"command": "md", "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team docs"]}'
+# Multiple directories with descriptions (JSON is more reliable for complex args)
+claude mcp add-json knowledge-bases --scope user '{"command": "md", "args": ["mcp", "notes:~/notes|Personal journal", "wiki:~/wiki|Team knowledge base"]}'
 ```
 
 **Scope options:**

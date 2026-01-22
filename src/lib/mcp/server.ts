@@ -5,9 +5,9 @@ import { handleRead, handleSearch } from './handlers.js';
 import type { Source } from './sources.js';
 import {
 	ReadToolParams,
-	ReadToolParamsJsonSchema,
+	ReadToolParamsBaseShape,
 	SearchToolParams,
-	SearchToolParamsJsonSchema,
+	SearchToolParamsShape,
 } from './tools.js';
 
 export interface MdMcpServer {
@@ -42,7 +42,7 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 	server.tool(
 		'search',
 		`Search indexed Markdown content. Returns matching pages with snippets.${sourceList}`,
-		SearchToolParamsJsonSchema,
+		SearchToolParamsShape,
 		async (params) => {
 			try {
 				// Validate and parse input
@@ -90,7 +90,7 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 	server.tool(
 		'read_page',
 		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous.${sourceList}` : ''}`,
-		ReadToolParamsJsonSchema,
+		ReadToolParamsBaseShape,
 		async (params) => {
 			try {
 				// Validate input (including refinement that path or id is required)

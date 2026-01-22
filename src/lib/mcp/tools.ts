@@ -57,13 +57,7 @@ export const ReadToolParams = ReadToolParamsBase.refine((params) => params.path 
 export type SearchToolParams = z.infer<typeof SearchToolParams>;
 export type ReadToolParams = z.infer<typeof ReadToolParams>;
 
-// JSON Schema exports for MCP tool registration (using Zod 4's native toJSONSchema)
-export const SearchToolParamsJsonSchema = z.toJSONSchema(SearchToolParams);
-
-// Generate base schema and add anyOf constraint to express "path or id required"
-const readToolParamsBaseSchema = z.toJSONSchema(ReadToolParamsBase);
-
-export const ReadToolParamsJsonSchema = {
-	...readToolParamsBaseSchema,
-	anyOf: [{ required: ['path'] }, { required: ['id'] }],
-};
+// Export Zod shapes for MCP SDK tool registration
+// The MCP SDK expects ZodRawShape objects, not JSON Schema
+export const SearchToolParamsShape = SearchToolParams.shape;
+export const ReadToolParamsBaseShape = ReadToolParamsBase.shape;

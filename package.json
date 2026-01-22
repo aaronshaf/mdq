@@ -1,5 +1,5 @@
 {
-  "name": "md",
+  "name": "@aaronshaf/md",
   "version": "0.6.1",
   "description": "CLI tool for indexing and searching local markdown files via Meilisearch",
   "type": "module",

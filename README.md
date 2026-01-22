@@ -2,31 +2,35 @@
 
 CLI for indexing and searching local markdown files via Meilisearch with MCP server support.
 
-## Installation
+## Getting Started
+
+### Step 1: Install Bun runtime
 
 ```bash
-# Install Bun runtime
 curl -fsSL https://bun.sh/install | bash
+```
 
-# Install md
+### Step 2: Install md
+
+```bash
 bun install -g @aaronshaf/md
 ```
 
-## Setup
-
-Start Meilisearch (required for indexing and search):
+### Step 3: Start Meilisearch
 
 ```bash
 docker run -d -p 7700:7700 getmeili/meilisearch:latest
 ```
 
-## Getting Started
+### Step 4: Index your markdown files
 
 ```bash
-# Index your markdown files
 md search index --path ~/docs
+```
 
-# Search
+### Step 5: Search
+
+```bash
 md search "query"
 ```
 

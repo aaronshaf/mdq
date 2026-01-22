@@ -1,6 +1,6 @@
 {
   "name": "md",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI tool for indexing and searching local markdown files via Meilisearch",
   "type": "module",
   "bin": {

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export const SearchToolParams = z.object({
 	query: z.string().describe('Search query (supports typo tolerance)'),
@@ -58,20 +57,13 @@ export const ReadToolParams = ReadToolParamsBase.refine((params) => params.path 
 export type SearchToolParams = z.infer<typeof SearchToolParams>;
 export type ReadToolParams = z.infer<typeof ReadToolParams>;
 
-// JSON Schema exports for MCP tool registration
-// Type assertion needed due to Zod 4 incompatibility with zod-to-json-schema types
-// biome-ignore lint/suspicious/noExplicitAny: zod-to-json-schema not yet compatible with Zod 4 types
-export const SearchToolParamsJsonSchema = zodToJsonSchema(SearchToolParams as any, {
-	$refStrategy: 'none',
-});
+// JSON Schema exports for MCP tool registration (using Zod 4's native toJSONSchema)
+export const SearchToolParamsJsonSchema = z.toJSONSchema(SearchToolParams);
 
 // Generate base schema and add anyOf constraint to express "path or id required"
-// biome-ignore lint/suspicious/noExplicitAny: zod-to-json-schema not yet compatible with Zod 4 types
-const readToolParamsBaseSchema = zodToJsonSchema(ReadToolParamsBase as any, {
-	$refStrategy: 'none',
-});
+const readToolParamsBaseSchema = z.toJSONSchema(ReadToolParamsBase);
 
 export const ReadToolParamsJsonSchema = {
 	...readToolParamsBaseSchema,
 	anyOf: [{ required: ['path'] }, { required: ['id'] }],
-} as typeof readToolParamsBaseSchema;
+};

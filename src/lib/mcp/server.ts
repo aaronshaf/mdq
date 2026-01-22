@@ -1,10 +1,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { JSONSchema, Schema } from 'effect';
 import packageJson from '../../../package.json';
 import { handleRead, handleSearch } from './handlers.js';
 import type { Source } from './sources.js';
-import { ReadToolParams, SearchToolParams } from './tools.js';
+import {
+	ReadToolParams,
+	ReadToolParamsJsonSchema,
+	SearchToolParams,
+	SearchToolParamsJsonSchema,
+} from './tools.js';
 
 export interface MdMcpServer {
 	start(): Promise<void>;
@@ -17,23 +21,28 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 		version: packageJson.version,
 	});
 
-	const searchJsonSchema = JSONSchema.make(SearchToolParams);
-	const readJsonSchema = JSONSchema.make(ReadToolParams);
-	const decodeSearchParams = Schema.decodeUnknownSync(SearchToolParams);
-	const decodeReadParams = Schema.decodeUnknownSync(ReadToolParams);
-
-	// Build source map for quick lookup
-	const sourceMap = new Map(sources.map((s) => [s.name, s]));
+	// Build source map for quick lookup (keys are lowercased for case-insensitive lookup)
+	const sourceMap = new Map(sources.map((s) => [s.name.toLowerCase(), s]));
 	const sourceNames = sources.map((s) => s.name);
 
 	// Register search tool
 	server.tool(
 		'search',
 		`Search indexed Markdown content. Returns matching pages with snippets.${sources.length > 1 ? ` Available sources: ${sourceNames.join(', ')}` : ''}`,
-		searchJsonSchema,
+		SearchToolParamsJsonSchema,
 		async (params) => {
 			try {
-				const parsed = decodeSearchParams(params);
+				// Validate and parse input
+				const parseResult = SearchToolParams.safeParse(params);
+				if (!parseResult.success) {
+					const errorMsg = parseResult.error.issues[0]?.message ?? 'Invalid parameters';
+					return {
+						content: [{ type: 'text' as const, text: JSON.stringify({ error: errorMsg }) }],
+						isError: true,
+					};
+				}
+
+				const parsed = parseResult.data;
 				const result = await handleSearch(sources, sourceMap, {
 					query: parsed.query,
 					limit: parsed.limit,
@@ -68,10 +77,20 @@ export async function createMcpServer(sources: Source[]): Promise<MdMcpServer> {
 	server.tool(
 		'read_page',
 		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous. Available sources: ${sourceNames.join(', ')}` : ''}`,
-		readJsonSchema,
+		ReadToolParamsJsonSchema,
 		async (params) => {
 			try {
-				const parsed = decodeReadParams(params);
+				// Validate input (including refinement that path or id is required)
+				const parseResult = ReadToolParams.safeParse(params);
+				if (!parseResult.success) {
+					const errorMsg = parseResult.error.issues[0]?.message ?? 'Invalid parameters';
+					return {
+						content: [{ type: 'text' as const, text: JSON.stringify({ error: errorMsg }) }],
+						isError: true,
+					};
+				}
+
+				const parsed = parseResult.data;
 				const result = await handleRead(sources, sourceMap, {
 					path: parsed.path,
 					id: parsed.id,

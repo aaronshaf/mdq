@@ -113,9 +113,9 @@ export async function handleSearch(
 	let totalCount = 0;
 	const errors: string[] = [];
 
-	for (const { source, results, total, error } of searchResults) {
+	for (const { source: sourceName, results, total, error } of searchResults) {
 		if (error) {
-			errors.push(`${source}: ${error}`);
+			errors.push(`${sourceName}: ${error}`);
 		} else {
 			totalCount += total;
 			allResults.push(...results);
@@ -167,55 +167,61 @@ export async function handleRead(
 		sourcesToSearch = sources;
 	}
 
-	// Try to find the document in the sources
+	// Try to find the document in the sources (continue on per-source errors)
 	for (const source of sourcesToSearch) {
-		const indexName = deriveIndexName(source.path);
-		let filePath: string | null = null;
+		try {
+			const indexName = deriveIndexName(source.path);
+			let filePath: string | null = null;
 
-		if (input.path) {
-			const candidatePath = path.join(source.path, input.path);
-			// Validate path doesn't escape base directory
-			if (!isPathWithinBase(source.path, candidatePath)) {
-				continue;
-			}
-			filePath = candidatePath;
-		} else if (input.id) {
-			// Look up document by ID to get path
-			const doc = await client.getDocumentById(indexName, input.id);
-			if (doc) {
-				const candidatePath = path.join(source.path, doc.path);
+			if (input.path) {
+				const candidatePath = path.join(source.path, input.path);
 				// Validate path doesn't escape base directory
 				if (!isPathWithinBase(source.path, candidatePath)) {
 					continue;
 				}
 				filePath = candidatePath;
+			} else if (input.id) {
+				// Look up document by ID to get path
+				const doc = await client.getDocumentById(indexName, input.id);
+				if (doc) {
+					const candidatePath = path.join(source.path, doc.path);
+					// Validate path doesn't escape base directory
+					if (!isPathWithinBase(source.path, candidatePath)) {
+						continue;
+					}
+					filePath = candidatePath;
+				}
 			}
+
+			if (!filePath) {
+				continue;
+			}
+
+			// Check if file exists
+			const file = Bun.file(filePath);
+			if (!(await file.exists())) {
+				continue;
+			}
+
+			const parsed = await parseMarkdownFile(filePath, source.path);
+			const stat = await file.stat();
+
+			return {
+				id: parsed.id,
+				title: parsed.title,
+				content: parsed.content,
+				path: parsed.path,
+				labels: parsed.frontmatter.labels,
+				author_email: parsed.frontmatter.author_email,
+				created_at: stat?.birthtime.getTime(),
+				updated_at: stat?.mtime.getTime(),
+				source: source.name,
+			};
+		} catch (error) {
+			// Log and continue to next source on errors (e.g., missing index, network issues)
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`[md] read error for source "${source.name}": ${message}`);
 		}
-
-		if (!filePath) {
-			continue;
-		}
-
-		// Check if file exists
-		const file = Bun.file(filePath);
-		if (!(await file.exists())) {
-			continue;
-		}
-
-		const parsed = await parseMarkdownFile(filePath, source.path);
-		const stat = await file.stat();
-
-		return {
-			id: parsed.id,
-			title: parsed.title,
-			content: parsed.content,
-			path: parsed.path,
-			labels: parsed.frontmatter.labels,
-			author_email: parsed.frontmatter.author_email,
-			created_at: stat?.birthtime.getTime(),
-			updated_at: stat?.mtime.getTime(),
-			source: source.name,
-		};
 	}
 
 	return null;

@@ -10,6 +10,7 @@
         "gray-matter": "^4.0.3",
         "meilisearch": "^0.44.0",
         "zod": "^4.3.5",
+        "zod-to-json-schema": "^3.25.1",
       },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",

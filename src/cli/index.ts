@@ -269,7 +269,7 @@ EXAMPLES:
   md mcp ~/docs
   md mcp ~/docs ~/wiki ~/notes
   md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
-  md mcp -s notes:~/notes -d "Journal" -s eng:~/inst/eng -d "Engineering docs"
+  md mcp -s notes:~/notes -d "Journal" -s eng:~/docs/eng -d "Engineering docs"
 `);
 }
 

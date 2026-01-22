@@ -139,7 +139,7 @@ claude mcp add kb -- md mcp ~/docs ~/wiki ~/notes
 claude mcp add kb -- md mcp \
   -s ~/notes -d "Personal journal" \
   -s ~/wiki -d "Team knowledge base" \
-  -s ~/inst/eng -d "Engineering docs and RFCs"
+  -s ~/docs/eng -d "Engineering docs and RFCs"
 ```
 
 **Scope options:**

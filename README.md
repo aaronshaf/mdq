@@ -2,22 +2,32 @@
 
 CLI for indexing and searching local markdown files via Meilisearch with MCP server support.
 
-## Requirements
+## Installation
 
-- Bun 1.2.0+
-- Meilisearch
+```bash
+# Install Bun runtime
+curl -fsSL https://bun.sh/install | bash
+
+# Install md
+bun install -g @aaronshaf/md
+```
 
 ## Setup
 
+Start Meilisearch (required for indexing and search):
+
 ```bash
-bun install
-
-# Start Meilisearch
 docker run -d -p 7700:7700 getmeili/meilisearch:latest
+```
 
-# Index and search
-bun run src/cli.ts search index --path ~/docs
-bun run src/cli.ts search "query"
+## Getting Started
+
+```bash
+# Index your markdown files
+md search index --path ~/docs
+
+# Search
+md search "query"
 ```
 
 ## CLI
@@ -163,6 +173,10 @@ Excluded: `node_modules/`, `.*`, `AGENTS.md`, `CLAUDE.md`
 ## Development
 
 ```bash
+git clone https://github.com/aaronshaf/md
+cd md
+bun install
+
 bun test              # Run tests
 bun run typecheck     # Type check
 bun run lint          # Lint

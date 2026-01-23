@@ -167,6 +167,7 @@ async function parseFileToDocument(
 				author_email: parsed.frontmatter.author_email,
 				created_at: createdAt,
 				updated_at: updatedAt,
+				child_count: parsed.frontmatter.child_count,
 			},
 		};
 	} catch (error) {

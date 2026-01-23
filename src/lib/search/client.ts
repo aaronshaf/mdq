@@ -100,6 +100,7 @@ export class SearchClient {
 			author_email: hit.author_email,
 			created_at: hit.created_at,
 			updated_at: hit.updated_at,
+			child_count: hit.child_count,
 		}));
 
 		return {

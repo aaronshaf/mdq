@@ -268,4 +268,58 @@ Date without time component.
 		expect(doc?.created_at).toBe(new Date(dateOnly).getTime());
 		expect(Number.isNaN(doc?.created_at)).toBe(false);
 	});
+
+	test('indexes child_count from frontmatter', async () => {
+		// Create a test markdown file with child_count
+		const testFile = path.join(testDir, 'with-children.md');
+		const content = `---
+title: Parent Page
+child_count: 7
+---
+
+# Parent Page
+
+This page has 7 child pages.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'with-children');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.child_count).toBe(7);
+	});
+
+	test('omits invalid child_count from index', async () => {
+		// Create a test markdown file with invalid child_count
+		const testFile = path.join(testDir, 'invalid-count.md');
+		const content = `---
+title: Invalid Count
+child_count: "not-a-number"
+---
+
+# Invalid Count
+
+Invalid child count.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'invalid-count');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.child_count).toBeUndefined();
+	});
 });

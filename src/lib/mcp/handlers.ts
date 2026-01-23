@@ -89,6 +89,7 @@ export async function handleSearch(
 					author_email: r.author_email,
 					created_at: r.created_at,
 					updated_at: r.updated_at,
+					child_count: r.child_count,
 					source: source.name,
 				})),
 				total: response.total,
@@ -213,6 +214,7 @@ export async function handleRead(
 				author_email: parsed.frontmatter.author_email,
 				created_at: stat?.birthtime.getTime(),
 				updated_at: stat?.mtime.getTime(),
+				child_count: parsed.frontmatter.child_count,
 				source: source.name,
 			};
 		} catch (error) {

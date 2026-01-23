@@ -55,6 +55,16 @@ export function parseMarkdown(content: string, filePath: string, basePath: strin
 		frontmatter.labels = [frontmatter.labels];
 	}
 
+	// Validate child_count is a non-negative integer
+	if (frontmatter.child_count !== undefined) {
+		const count = Number(frontmatter.child_count);
+		if (!Number.isInteger(count) || count < 0) {
+			frontmatter.child_count = undefined;
+		} else {
+			frontmatter.child_count = count;
+		}
+	}
+
 	return {
 		id: deriveId(filePath, frontmatter, basePath),
 		title: deriveTitle(markdownContent, frontmatter, filePath),

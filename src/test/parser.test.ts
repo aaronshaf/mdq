@@ -90,4 +90,58 @@ Content`;
 		expect(result.id).toBe('readme');
 		expect(result.frontmatter).toEqual({});
 	});
+
+	test('preserves valid child_count', () => {
+		const content = `---
+child_count: 5
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBe(5);
+	});
+
+	test('preserves child_count of zero', () => {
+		const content = `---
+child_count: 0
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBe(0);
+	});
+
+	test('converts string child_count to number', () => {
+		const content = `---
+child_count: "10"
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBe(10);
+	});
+
+	test('rejects negative child_count', () => {
+		const content = `---
+child_count: -5
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBeUndefined();
+	});
+
+	test('rejects non-integer child_count', () => {
+		const content = `---
+child_count: 3.5
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBeUndefined();
+	});
+
+	test('rejects invalid string child_count', () => {
+		const content = `---
+child_count: "not-a-number"
+---
+Content`;
+		const result = parseMarkdown(content, '/base/test.md', '/base');
+		expect(result.frontmatter.child_count).toBeUndefined();
+	});
 });

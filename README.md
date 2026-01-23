@@ -87,12 +87,16 @@ title: Page Title
 page_id: custom-id
 labels: [api, docs]
 author_email: user@example.com
+child_count: 5
 ---
 ```
 
-Title derivation: `frontmatter.title` > first `# heading` > filename
+**Field descriptions:**
+- `child_count`: Number of direct child pages (useful for identifying hub pages vs leaf pages)
 
-ID derivation: `frontmatter.page_id` > sanitized path (e.g., `docs-api-auth`)
+**Derivation rules:**
+- Title: `frontmatter.title` > first `# heading` > filename
+- ID: `frontmatter.page_id` > sanitized path (e.g., `docs-api-auth`)
 
 ## MCP Server
 

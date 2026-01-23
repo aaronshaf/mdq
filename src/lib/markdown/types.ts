@@ -5,6 +5,7 @@ export interface MarkdownFrontmatter {
 	author_email?: string;
 	created_at?: string | Date; // gray-matter may parse ISO dates as Date objects
 	updated_at?: string | Date; // gray-matter may parse ISO dates as Date objects
+	child_count?: number;
 	[key: string]: unknown;
 }
 

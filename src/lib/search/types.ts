@@ -7,6 +7,7 @@ export interface SearchDocument {
 	author_email?: string;
 	created_at?: number;
 	updated_at?: number;
+	child_count?: number;
 }
 
 export interface SearchOptions {
@@ -33,6 +34,7 @@ export interface SearchResult {
 	author_email?: string;
 	created_at?: number;
 	updated_at?: number;
+	child_count?: number;
 }
 
 export interface SearchResponse {

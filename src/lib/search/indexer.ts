@@ -70,10 +70,92 @@ interface ParseResult {
 	error?: string;
 }
 
-async function parseFileToDocument(file: string, basePath: string): Promise<ParseResult> {
+/**
+ * Resolve a date field by prioritizing frontmatter over filesystem dates
+ * Validates that the frontmatter date is valid before using it
+ * Note: gray-matter may parse ISO dates as Date objects, so we handle both strings and Dates
+ */
+function resolveDateField(
+	frontmatterDate: string | Date | undefined,
+	filesystemDate: Date | undefined,
+): number | undefined {
+	// Try frontmatter date first
+	if (frontmatterDate) {
+		// Handle Date objects (gray-matter may parse ISO dates as Date)
+		if (frontmatterDate instanceof Date) {
+			const timestamp = frontmatterDate.getTime();
+			if (!Number.isNaN(timestamp)) {
+				return timestamp;
+			}
+		}
+		// Handle strings
+		else if (typeof frontmatterDate === 'string') {
+			const trimmed = frontmatterDate.trim();
+			if (trimmed) {
+				const timestamp = new Date(trimmed).getTime();
+				if (!Number.isNaN(timestamp)) {
+					return timestamp;
+				}
+			}
+		}
+	}
+	// Fall back to filesystem date
+	return filesystemDate?.getTime();
+}
+
+async function parseFileToDocument(
+	file: string,
+	basePath: string,
+	verbose = false,
+): Promise<ParseResult> {
 	try {
 		const parsed = await parseMarkdownFile(file, basePath);
 		const stat = await Bun.file(file).stat();
+
+		// Prioritize frontmatter dates over filesystem dates
+		// This preserves real creation dates across git operations
+		const createdAt = resolveDateField(parsed.frontmatter.created_at, stat?.birthtime);
+
+		const updatedAt = resolveDateField(parsed.frontmatter.updated_at, stat?.mtime);
+
+		// Log warnings for invalid dates in verbose mode
+		if (verbose) {
+			// Check if frontmatter date was provided but couldn't be parsed
+			if (parsed.frontmatter.created_at) {
+				const date = parsed.frontmatter.created_at;
+				let isInvalid = false;
+				if (date instanceof Date) {
+					isInvalid = Number.isNaN(date.getTime());
+				} else if (typeof date === 'string') {
+					const trimmed = date.trim();
+					if (trimmed) {
+						isInvalid = Number.isNaN(new Date(trimmed).getTime());
+					}
+				}
+				if (isInvalid) {
+					console.error(
+						`Warning: Invalid created_at date "${parsed.frontmatter.created_at}" in ${parsed.path}, using filesystem date`,
+					);
+				}
+			}
+			if (parsed.frontmatter.updated_at) {
+				const date = parsed.frontmatter.updated_at;
+				let isInvalid = false;
+				if (date instanceof Date) {
+					isInvalid = Number.isNaN(date.getTime());
+				} else if (typeof date === 'string') {
+					const trimmed = date.trim();
+					if (trimmed) {
+						isInvalid = Number.isNaN(new Date(trimmed).getTime());
+					}
+				}
+				if (isInvalid) {
+					console.error(
+						`Warning: Invalid updated_at date "${parsed.frontmatter.updated_at}" in ${parsed.path}, using filesystem date`,
+					);
+				}
+			}
+		}
 
 		return {
 			document: {
@@ -83,8 +165,8 @@ async function parseFileToDocument(file: string, basePath: string): Promise<Pars
 				path: parsed.path,
 				labels: parsed.frontmatter.labels,
 				author_email: parsed.frontmatter.author_email,
-				created_at: stat ? stat.birthtime.getTime() : undefined,
-				updated_at: stat ? stat.mtime.getTime() : undefined,
+				created_at: createdAt,
+				updated_at: updatedAt,
 			},
 		};
 	} catch (error) {
@@ -104,7 +186,7 @@ async function parseAllFiles(
 	let errors = 0;
 
 	for (const file of files) {
-		const result = await parseFileToDocument(file, basePath);
+		const result = await parseFileToDocument(file, basePath, verbose);
 		if (result.document) {
 			documents.push(result.document);
 		} else {

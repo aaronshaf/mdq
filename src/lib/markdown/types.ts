@@ -3,8 +3,8 @@ export interface MarkdownFrontmatter {
 	page_id?: string;
 	labels?: string[];
 	author_email?: string;
-	created_at?: string;
-	updated_at?: string;
+	created_at?: string | Date; // gray-matter may parse ISO dates as Date objects
+	updated_at?: string | Date; // gray-matter may parse ISO dates as Date objects
 	[key: string]: unknown;
 }
 

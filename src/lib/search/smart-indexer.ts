@@ -10,7 +10,6 @@ import {
 	parseJsonArray,
 } from '../llm/index.js';
 import { type Logger, createLogger } from '../logger.js';
-import { createAtoms } from './atoms.js';
 import { type SearchClient, createSearchClient } from './client.js';
 import { deriveIndexName } from './indexer.js';
 import type { SearchDocument, SmartIndexResult } from './types.js';
@@ -115,7 +114,6 @@ export class SmartIndexer {
 				total: passResult.total,
 				indexName,
 				...(pass === Pass.ATOMS && {
-					atomsIndexName: `${indexName}-atoms`,
 					atomsCreated: passResult.atomsCreated ?? 0,
 				}),
 			});
@@ -348,7 +346,6 @@ export class SmartIndexer {
 								total: passResult.total,
 								indexName,
 								...(pass === Pass.ATOMS && {
-									atomsIndexName: `${indexName}-atoms`,
 									atomsCreated: passResult.atomsCreated ?? 0,
 								}),
 							});
@@ -482,9 +479,6 @@ export class SmartIndexer {
 		documents: SearchDocument[],
 		concurrency: number,
 	): Promise<PassResult> {
-		// Ensure atoms index exists (non-destructive)
-		await this.searchClient.ensureAtomsIndex(indexName);
-
 		let processed = 0;
 		let errors = 0;
 		let atomsCreated = 0;
@@ -494,27 +488,20 @@ export class SmartIndexer {
 		const processDoc = async (doc: SearchDocument): Promise<void> => {
 			await semaphore.acquire();
 			try {
-				// Delete existing atoms for this document
-				await this.searchClient.deleteAtomsForDocument(indexName, doc.id);
-
 				const { system, user } = buildAtomsPrompt(doc.title, doc.content);
 				const response = await this.llmClient.complete(system, user, { maxTokens: 1024 });
 				const atomContents = parseJsonArray(response);
 
-				if (atomContents.length > 0) {
-					const atoms = createAtoms(doc, atomContents);
-					await this.searchClient.addAtoms(indexName, atoms);
-					atomsCreated += atoms.length;
-				}
-
 				await this.searchClient.updateDocuments(indexName, [
 					{
 						id: doc.id,
+						atoms: atomContents.length > 0 ? atomContents : undefined,
 						smart_indexed_at: Date.now(),
 						pass_level: Pass.ATOMS,
 					},
 				]);
 
+				atomsCreated += atomContents.length;
 				processed++;
 			} catch (error) {
 				errors++;

@@ -5,7 +5,6 @@ import {
 } from 'meilisearch';
 import { buildDateFilters, filtersToMeilisearchString } from './date-utils.js';
 import type {
-	Atom,
 	IndexStatus,
 	SearchDocument,
 	SearchOptions,
@@ -92,13 +91,7 @@ export class SearchClient {
 			searchParams,
 		);
 
-		// Fetch atoms for each result in parallel
-		const atomsPromises = response.hits.map((hit) =>
-			this.getAtomsForDocument(indexName, hit.id).catch(() => []),
-		);
-		const atomsResults = await Promise.all(atomsPromises);
-
-		const results: SearchResult[] = response.hits.map((hit, index) => ({
+		const results: SearchResult[] = response.hits.map((hit) => ({
 			id: hit.id,
 			title: hit.title,
 			path: hit.path,
@@ -108,9 +101,10 @@ export class SearchClient {
 			created_at: hit.created_at,
 			updated_at: hit.updated_at,
 			child_count: hit.child_count,
+			reference: hit.reference,
 			summary: hit.summary,
 			related_ids: hit.related_ids,
-			atoms: atomsResults[index]!.length > 0 ? atomsResults[index] : undefined,
+			atoms: hit.atoms,
 		}));
 
 		return {
@@ -265,117 +259,6 @@ export class SearchClient {
 		}
 
 		return allDocuments;
-	}
-
-	async ensureAtomsIndex(indexName: string): Promise<void> {
-		const atomsIndexName = `${indexName}-atoms`;
-
-		// Check if index already exists
-		try {
-			await this.client.getIndex(atomsIndexName);
-			// Index exists, nothing to do
-			return;
-		} catch {
-			// Index doesn't exist, create it
-		}
-
-		const task = await this.client.createIndex(atomsIndexName, { primaryKey: 'id' });
-		await this.client.waitForTask(task.taskUid);
-
-		const index = this.client.index(atomsIndexName);
-		const settingsTask = await index.updateSettings({
-			searchableAttributes: ['content'],
-			filterableAttributes: ['doc_id', 'created_at'],
-			sortableAttributes: ['created_at'],
-		});
-		await this.client.waitForTask(settingsTask.taskUid);
-	}
-
-	async recreateAtomsIndex(indexName: string): Promise<void> {
-		const atomsIndexName = `${indexName}-atoms`;
-
-		try {
-			await this.client.deleteIndex(atomsIndexName);
-		} catch {
-			// Index might not exist, that's okay
-		}
-
-		const task = await this.client.createIndex(atomsIndexName, { primaryKey: 'id' });
-		await this.client.waitForTask(task.taskUid);
-
-		const index = this.client.index(atomsIndexName);
-		const settingsTask = await index.updateSettings({
-			searchableAttributes: ['content'],
-			filterableAttributes: ['doc_id', 'created_at'],
-			sortableAttributes: ['created_at'],
-		});
-		await this.client.waitForTask(settingsTask.taskUid);
-	}
-
-	/** @deprecated Use ensureAtomsIndex for non-destructive or recreateAtomsIndex for forced recreation */
-	async createAtomsIndex(indexName: string): Promise<void> {
-		return this.recreateAtomsIndex(indexName);
-	}
-
-	async addAtoms(indexName: string, atoms: Atom[]): Promise<void> {
-		const atomsIndexName = `${indexName}-atoms`;
-		const index = this.client.index(atomsIndexName);
-		const task = await index.addDocuments(atoms);
-		const result = await this.client.waitForTask(task.taskUid);
-
-		// Check if task failed
-		if (result.status === 'failed') {
-			throw new Error(`Failed to add atoms: ${result.error?.message || 'Unknown error'}`);
-		}
-	}
-
-	async searchAtoms(
-		indexName: string,
-		query: string,
-		limit = 10,
-	): Promise<Array<Atom & { _formatted?: { content?: string } }>> {
-		const atomsIndexName = `${indexName}-atoms`;
-		const index = this.client.index<Atom>(atomsIndexName);
-
-		const response = await index.search(query, {
-			limit,
-			attributesToHighlight: ['content'],
-			highlightPreTag: '',
-			highlightPostTag: '',
-		});
-
-		return response.hits;
-	}
-
-	async deleteAtomsForDocument(indexName: string, docId: string): Promise<void> {
-		const atomsIndexName = `${indexName}-atoms`;
-		const index = this.client.index<Atom>(atomsIndexName);
-
-		try {
-			const task = await index.deleteDocuments({
-				filter: `doc_id = "${escapeFilterValue(docId)}"`,
-			});
-			await this.client.waitForTask(task.taskUid);
-		} catch {
-			// Index or documents might not exist
-		}
-	}
-
-	async getAtomsForDocument(indexName: string, docId: string): Promise<string[]> {
-		const atomsIndexName = `${indexName}-atoms`;
-		const index = this.client.index<Atom>(atomsIndexName);
-
-		try {
-			const response = await index.search('', {
-				filter: `doc_id = "${escapeFilterValue(docId)}"`,
-				limit: 100, // Get up to 100 atoms per document
-			});
-
-			return response.hits.map((atom) => atom.content);
-		} catch {
-			// Index might not exist or no atoms for this document
-			return [];
-		}
 	}
 
 	get meiliClient(): MeiliSearch {

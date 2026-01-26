@@ -16,10 +16,14 @@ export interface MdMcpServer {
 	close(): Promise<void>;
 }
 
-export async function createMcpServer(
+/**
+ * Creates an MCP server instance without a transport.
+ * This allows the server to be used with different transports (stdio, HTTP, etc.)
+ */
+export async function createMcpServerInstance(
 	sources: Source[],
 	client: SearchClient,
-): Promise<MdMcpServer> {
+): Promise<McpServer> {
 	const server = new McpServer({
 		name: 'md',
 		version: packageJson.version,
@@ -50,7 +54,10 @@ export async function createMcpServer(
 Each result includes:
 - Basic metadata: id, title, path, created_at, updated_at, author_email, labels
 - Content: snippet (excerpt from the document)
-- Smart indexing data (if available): summary (AI-generated 1-2 sentence overview), atoms (key facts extracted from the document), related_ids (semantically related document IDs)${sourceList}`,
+- Citation: reference (Chicago-style citation for the source, if available) - USE THIS FOR FOOTNOTES
+- Smart indexing data (if available): summary, atoms, related_ids
+
+IMPORTANT: summary and atoms are AI-GENERATED and should NOT be quoted or cited as authoritative. Only quote directly from the document content or snippet. Use the reference field for proper citations.${sourceList}`,
 		SearchToolParamsShape,
 		async (params) => {
 			try {
@@ -80,7 +87,6 @@ Each result includes:
 					stale: parsed.stale,
 					sort: parsed.sort,
 					include_related: parsed.include_related,
-					search_atoms: parsed.search_atoms,
 				});
 
 				return {
@@ -100,7 +106,9 @@ Each result includes:
 	// Register read tool
 	server.tool(
 		'read_page',
-		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous.${sourceList}` : ''}`,
+		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous.${sourceList}` : ''}
+
+Use this tool to get QUOTABLE TEXT for citations. The content field contains the full document text that can be directly quoted. The reference field (if available) provides the Chicago-style citation to use in footnotes.`,
 		ReadToolParamsBaseShape,
 		async (params) => {
 			try {
@@ -142,6 +150,18 @@ Each result includes:
 		},
 	);
 
+	return server;
+}
+
+/**
+ * Creates an MCP server with stdio transport (backward compatible).
+ * This is the default mode for local CLI usage.
+ */
+export async function createMcpServer(
+	sources: Source[],
+	client: SearchClient,
+): Promise<MdMcpServer> {
+	const server = await createMcpServerInstance(sources, client);
 	const transport = new StdioServerTransport();
 
 	return {

@@ -38,11 +38,6 @@ export const SearchToolParams = z.object({
 		.optional()
 		.default(false)
 		.describe('Also fetch related documents (requires smart indexing)'),
-	search_atoms: z
-		.boolean()
-		.optional()
-		.default(false)
-		.describe('Also search semantic atoms index and return parent documents'),
 });
 
 // Base schema for read tool (used for MCP tool registration)

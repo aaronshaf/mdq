@@ -22,15 +22,7 @@ export {
 	Pass,
 	type SmartIndexOptions,
 } from './smart-indexer.js';
-export {
-	createAtoms,
-	deduplicateAtoms,
-	generateAtomId,
-	getAtomsIndexName,
-	groupAtomsByDocument,
-} from './atoms.js';
 export type {
-	Atom,
 	IndexResult,
 	IndexStatus,
 	SearchDocument,

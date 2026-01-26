@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Glob } from 'bun';
 import { parseMarkdownFile } from '../markdown/index.js';
 import { type SearchClient, createSearchClient } from './client.js';
+import { readMdignore, shouldIgnore } from './mdignore.js';
 import type { IndexResult, SearchDocument } from './types.js';
 
 const EXCLUDED_DIRS = new Set(['node_modules', '.git', '.svn', '.hg']);
@@ -51,14 +52,21 @@ function shouldExclude(filePath: string, basePath: string): boolean {
 	return false;
 }
 
-export async function scanMarkdownFiles(basePath: string): Promise<string[]> {
+export async function scanMarkdownFiles(
+	basePath: string,
+	mdignorePatterns: string[] = [],
+): Promise<string[]> {
 	const absoluteBase = path.resolve(basePath);
 	const glob = new Glob('**/*.md');
 	const files: string[] = [];
 
 	for await (const file of glob.scan({ cwd: absoluteBase, absolute: true })) {
 		if (!shouldExclude(file, absoluteBase)) {
-			files.push(file);
+			// Check .mdignore patterns
+			const relativePath = path.relative(absoluteBase, file);
+			if (!shouldIgnore(relativePath, mdignorePatterns)) {
+				files.push(file);
+			}
 		}
 	}
 
@@ -210,7 +218,13 @@ export async function indexDirectory(
 	const searchClient = client ?? createSearchClient();
 	const indexName = deriveIndexName(absolutePath);
 
-	const files = await scanMarkdownFiles(absolutePath);
+	// Read .mdignore patterns
+	const mdignorePatterns = await readMdignore(absolutePath);
+	if (verbose && mdignorePatterns.length > 0) {
+		console.error(`Loaded ${mdignorePatterns.length} ignore patterns from .mdignore`);
+	}
+
+	const files = await scanMarkdownFiles(absolutePath, mdignorePatterns);
 	if (verbose) console.error(`Found ${files.length} markdown files`);
 
 	if (verbose) console.error(`Recreating index: ${indexName}`);

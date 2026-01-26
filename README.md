@@ -81,6 +81,45 @@ md search "" --stale 90d
 md search "api" --json
 ```
 
+## Ignoring Files (.mdignore)
+
+Create a `.mdignore` file in your directory root to exclude files and directories from indexing. Uses gitignore-style syntax.
+
+### Syntax
+
+```
+# Comments start with #
+*.draft.md              # Ignore by pattern
+temp/                   # Ignore directory (everything in temp/)
+archive/old.md          # Ignore specific file
+!important.draft.md     # Negate (include exception)
+```
+
+### Example .mdignore
+
+```
+# Ignore drafts and work-in-progress
+*.draft.md
+*.wip.md
+
+# Ignore temporary files
+temp/
+scratch/
+
+# Ignore archived content
+archive/
+
+# But include important exceptions
+!archive/important.md
+```
+
+### Notes
+
+- Patterns are evaluated in order (later patterns can override earlier ones)
+- Directory patterns must end with `/` (e.g., `temp/` not `temp`)
+- `.mdignore` itself is never indexed
+- When you add new patterns, run `md search index` again to remove newly-ignored files
+
 ## Smart Indexing (LLM-Powered)
 
 Enhance your markdown index with AI-generated summaries, semantic atoms, and document relationships.

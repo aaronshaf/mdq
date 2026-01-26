@@ -11,6 +11,12 @@ export {
 } from './date-utils.js';
 export { Indexer, deriveIndexName, indexDirectory, scanMarkdownFiles } from './indexer.js';
 export {
+	filterIgnored,
+	parseMdignore,
+	readMdignore,
+	shouldIgnore,
+} from './mdignore.js';
+export {
 	SmartIndexer,
 	createSmartIndexer,
 	Pass,

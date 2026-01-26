@@ -23,11 +23,13 @@
     "effect": "^3.16.10",
     "gray-matter": "^4.0.3",
     "meilisearch": "^0.44.0",
+    "minimatch": "^10.1.1",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "^1.2.0",
+    "@types/minimatch": "^6.0.0",
     "typescript": "^5.7.3"
   },
   "engines": {

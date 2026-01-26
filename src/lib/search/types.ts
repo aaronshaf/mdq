@@ -8,6 +8,11 @@ export interface SearchDocument {
 	created_at?: number;
 	updated_at?: number;
 	child_count?: number;
+	// Smart indexing fields
+	summary?: string;
+	related_ids?: string[];
+	smart_indexed_at?: number;
+	pass_level?: number;
 }
 
 export interface SearchOptions {
@@ -35,6 +40,10 @@ export interface SearchResult {
 	created_at?: number;
 	updated_at?: number;
 	child_count?: number;
+	// Smart indexing fields
+	summary?: string;
+	related_ids?: string[];
+	atoms?: string[]; // Array of atom content strings
 }
 
 export interface SearchResponse {
@@ -54,4 +63,23 @@ export interface IndexResult {
 	indexed: number;
 	total: number;
 	indexName: string;
+}
+
+export interface Atom {
+	id: string;
+	content: string;
+	doc_id: string;
+	doc_path: string;
+	doc_title: string;
+	confidence?: number;
+	created_at: number;
+}
+
+export interface SmartIndexResult {
+	pass: number;
+	processed: number;
+	total: number;
+	indexName: string;
+	atomsIndexName?: string;
+	atomsCreated?: number;
 }

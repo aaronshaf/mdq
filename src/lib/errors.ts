@@ -44,13 +44,20 @@ export interface FileSystemError extends BaseError {
 	readonly path?: string;
 }
 
+export interface LLMError extends BaseError {
+	readonly _tag: 'LLMError';
+	readonly endpoint?: string;
+	readonly model?: string;
+}
+
 export type MdError =
 	| ConnectionError
 	| NotFoundError
 	| ParseError
 	| InvalidArgsError
 	| IndexError
-	| FileSystemError;
+	| FileSystemError
+	| LLMError;
 
 export function createConnectionError(message: string, url?: string): ConnectionError {
 	return { _tag: 'ConnectionError', message, url };
@@ -76,6 +83,10 @@ export function createFileSystemError(message: string, path?: string): FileSyste
 	return { _tag: 'FileSystemError', message, path };
 }
 
+export function createLLMError(message: string, endpoint?: string, model?: string): LLMError {
+	return { _tag: 'LLMError', message, endpoint, model };
+}
+
 export function getExitCode(error: MdError): ExitCode {
 	switch (error._tag) {
 		case 'ConnectionError':
@@ -90,5 +101,40 @@ export function getExitCode(error: MdError): ExitCode {
 			return EXIT_CODES.GENERAL_ERROR;
 		case 'FileSystemError':
 			return EXIT_CODES.GENERAL_ERROR;
+		case 'LLMError':
+			return EXIT_CODES.CONNECTION_ERROR;
 	}
+}
+
+/**
+ * Format any error into a readable string message
+ */
+export function formatError(error: unknown): string {
+	// Handle standard Error objects
+	if (error instanceof Error) {
+		return error.message;
+	}
+
+	// Handle our custom MdError objects
+	if (error && typeof error === 'object' && '_tag' in error) {
+		const mdError = error as MdError;
+		return mdError.message;
+	}
+
+	// Handle plain objects
+	if (error && typeof error === 'object') {
+		// Try to extract useful information
+		if ('message' in error && typeof error.message === 'string') {
+			return error.message;
+		}
+		// Fallback to JSON representation
+		try {
+			return JSON.stringify(error);
+		} catch {
+			return String(error);
+		}
+	}
+
+	// Fallback for primitives
+	return String(error);
 }

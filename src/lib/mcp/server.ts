@@ -45,7 +45,12 @@ export async function createMcpServer(
 	// Register search tool
 	server.tool(
 		'search',
-		`Search indexed Markdown content. Returns matching pages with snippets.${sourceList}`,
+		`Search indexed Markdown content. Returns matching pages with snippets.
+
+Each result includes:
+- Basic metadata: id, title, path, created_at, updated_at, author_email, labels
+- Content: snippet (excerpt from the document)
+- Smart indexing data (if available): summary (AI-generated 1-2 sentence overview), atoms (key facts extracted from the document), related_ids (semantically related document IDs)${sourceList}`,
 		SearchToolParamsShape,
 		async (params) => {
 			try {
@@ -74,6 +79,8 @@ export async function createMcpServer(
 					updated_within: parsed.updated_within,
 					stale: parsed.stale,
 					sort: parsed.sort,
+					include_related: parsed.include_related,
+					search_atoms: parsed.search_atoms,
 				});
 
 				return {

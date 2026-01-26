@@ -15,6 +15,8 @@ export interface SearchToolInput {
 	updated_within?: string;
 	stale?: string;
 	sort?: 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
+	include_related?: boolean;
+	search_atoms?: boolean;
 }
 
 export interface SearchResultWithSource extends SearchResult {

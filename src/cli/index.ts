@@ -8,6 +8,7 @@ import {
 	runSearchStatusCommand,
 	runStatusCommand,
 } from './commands/search.js';
+import { runSmartIndexAutoCommand, runSmartIndexStatusCommand } from './commands/smart-index.js';
 
 // Read version at module load time - Bun resolves JSON imports synchronously
 import packageJson from '../../package.json';
@@ -41,10 +42,15 @@ interface ParsedArgs {
 		updatedWithin?: string;
 		stale?: string;
 		sort?: SortValue;
+		// Smart-index options
+		batchSize?: number;
+		timeLimitMinutes?: number;
+		reset: boolean;
+		dryRun: boolean;
 	};
 }
 
-type BooleanFlag = 'help' | 'version' | 'verbose' | 'json' | 'xml';
+type BooleanFlag = 'help' | 'version' | 'verbose' | 'json' | 'xml' | 'reset' | 'dryRun';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -73,6 +79,8 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--verbose': 'verbose',
 	'--json': 'json',
 	'--xml': 'xml',
+	'--reset': 'reset',
+	'--dry-run': 'dryRun',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -95,6 +103,8 @@ function handlePositionalArg(result: ParsedArgs, arg: string): void {
 		result.command === 'search' &&
 		(arg === 'index' || arg === 'status')
 	) {
+		result.subcommand = arg;
+	} else if (!result.subcommand && result.command === 'smart-index' && arg === 'status') {
 		result.subcommand = arg;
 	} else {
 		result.positional.push(arg);
@@ -151,6 +161,26 @@ function tryParseFlag(
 		return 2;
 	}
 
+	if (arg === '--batch-size' && nextArg !== undefined) {
+		const batchSize = Number.parseInt(nextArg, 10);
+		if (Number.isNaN(batchSize) || batchSize < 1 || batchSize > 1000) {
+			console.error('Error: --batch-size must be a number between 1 and 1000');
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.batchSize = batchSize;
+		return 2;
+	}
+
+	if (arg === '--time-limit' && nextArg !== undefined) {
+		const timeLimit = Number.parseInt(nextArg, 10);
+		if (Number.isNaN(timeLimit) || timeLimit < 1 || timeLimit > 1440) {
+			console.error('Error: --time-limit must be a number between 1 and 1440 (minutes)');
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.timeLimitMinutes = timeLimit;
+		return 2;
+	}
+
 	return 0;
 }
 
@@ -165,6 +195,8 @@ function parseArgs(args: string[]): ParseResult {
 			verbose: false,
 			json: false,
 			xml: false,
+			reset: false,
+			dryRun: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -232,6 +264,8 @@ COMMANDS:
   search <query>     Search indexed markdown content
   search index       Build/rebuild the search index
   search status      Check Meilisearch connection and index status
+  smart-index        Run LLM-powered smart indexing (summaries, atoms, relationships)
+  smart-index status Check LLM and Meilisearch connectivity
   mcp [sources...]   Start MCP server for AI assistant integration
 
 GLOBAL OPTIONS:
@@ -255,9 +289,26 @@ SEARCH OPTIONS:
   --stale <dur>            Filter: NOT updated within duration (find stale content)
   --sort <field>           Sort order: created_at, -created_at, updated_at, -updated_at
 
+SMART-INDEX OPTIONS:
+  --batch-size <n>   Max documents to process per run (default: unlimited)
+  --time-limit <min> Max time to run in minutes (default: unlimited)
+  --reset            Reset and reprocess all documents from scratch
+  --dry-run          Show what would be processed without making changes
+
+NOTES:
+  - Without --batch-size or --time-limit, processes all remaining documents
+  - With either limit, stops when limit reached or no more work to do
+  - Automatically detects which documents need work (depth-first processing)
+  - When all documents complete, re-runs relationship detection for refinement
+
 MCP OPTIONS:
   -s, --source <path>      Add a source directory (can use name:path format)
   -d, --desc <text>        Description for the preceding source (helps AI know when to search)
+
+ENVIRONMENT VARIABLES:
+  MD_LLM_ENDPOINT    LLM API endpoint (default: http://localhost:11434/v1 for Ollama)
+  MD_LLM_MODEL       LLM model name (default: qwen2.5:7b)
+  MD_LLM_API_KEY     API key for Claude/OpenAI
 
 EXAMPLES:
   md status
@@ -266,6 +317,10 @@ EXAMPLES:
   md search "old" --stale 90d
   md search index --path ~/docs
   md search status
+  md smart-index --path ~/docs --verbose
+  md smart-index --path ~/docs --batch-size 50 --verbose
+  md smart-index --path ~/docs --time-limit 5 --verbose
+  md smart-index --path ~/docs --reset --verbose
   md mcp ~/docs
   md mcp ~/docs ~/wiki ~/notes
   md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
@@ -396,6 +451,29 @@ export async function run(args: string[]): Promise<void> {
 				}
 
 				await runMcpCommand(sources);
+				break;
+			}
+
+			case 'smart-index': {
+				if (parsed.subcommand === 'status') {
+					const result = await runSmartIndexStatusCommand(basePath);
+					console.log(formatter.format(result));
+					if (!result.meiliHealthy || !result.llmHealthy) {
+						process.exit(EXIT_CODES.CONNECTION_ERROR);
+					}
+					break;
+				}
+
+				// Always use automatic mode
+				await runSmartIndexAutoCommand(basePath, {
+					batchSize: parsed.options.batchSize,
+					timeLimitMinutes: parsed.options.timeLimitMinutes,
+					reset: parsed.options.reset,
+					dryRun: parsed.options.dryRun,
+					verbose: parsed.options.verbose,
+				});
+
+				// Results are already logged during execution in verbose mode
 				break;
 			}
 

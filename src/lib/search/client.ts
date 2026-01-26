@@ -5,6 +5,7 @@ import {
 } from 'meilisearch';
 import { buildDateFilters, filtersToMeilisearchString } from './date-utils.js';
 import type {
+	Atom,
 	IndexStatus,
 	SearchDocument,
 	SearchOptions,
@@ -91,7 +92,13 @@ export class SearchClient {
 			searchParams,
 		);
 
-		const results: SearchResult[] = response.hits.map((hit) => ({
+		// Fetch atoms for each result in parallel
+		const atomsPromises = response.hits.map((hit) =>
+			this.getAtomsForDocument(indexName, hit.id).catch(() => []),
+		);
+		const atomsResults = await Promise.all(atomsPromises);
+
+		const results: SearchResult[] = response.hits.map((hit, index) => ({
 			id: hit.id,
 			title: hit.title,
 			path: hit.path,
@@ -101,6 +108,9 @@ export class SearchClient {
 			created_at: hit.created_at,
 			updated_at: hit.updated_at,
 			child_count: hit.child_count,
+			summary: hit.summary,
+			related_ids: hit.related_ids,
+			atoms: atomsResults[index]!.length > 0 ? atomsResults[index] : undefined,
 		}));
 
 		return {
@@ -188,9 +198,16 @@ export class SearchClient {
 		// Configure index settings
 		const index = this.client.index(indexName);
 		const settingsTask = await index.updateSettings({
-			searchableAttributes: ['title', 'content'],
-			filterableAttributes: ['labels', 'author_email', 'created_at', 'updated_at'],
-			sortableAttributes: ['created_at', 'updated_at'],
+			searchableAttributes: ['title', 'content', 'summary'],
+			filterableAttributes: [
+				'labels',
+				'author_email',
+				'created_at',
+				'updated_at',
+				'smart_indexed_at',
+				'pass_level',
+			],
+			sortableAttributes: ['created_at', 'updated_at', 'smart_indexed_at'],
 		});
 		await this.client.waitForTask(settingsTask.taskUid);
 	}
@@ -199,6 +216,166 @@ export class SearchClient {
 		const index = this.client.index(indexName);
 		const task = await index.addDocuments(documents);
 		await this.client.waitForTask(task.taskUid);
+	}
+
+	async updateDocuments(indexName: string, documents: Partial<SearchDocument>[]): Promise<void> {
+		const index = this.client.index(indexName);
+		const task = await index.updateDocuments(documents);
+		await this.client.waitForTask(task.taskUid);
+	}
+
+	async getAllDocuments(indexName: string, batchSize = 1000): Promise<SearchDocument[]> {
+		const index = this.client.index<SearchDocument>(indexName);
+		const allDocuments: SearchDocument[] = [];
+		let offset = 0;
+
+		// Paginate through all documents
+		while (true) {
+			const result = await index.getDocuments({ limit: batchSize, offset });
+			allDocuments.push(...result.results);
+
+			if (result.results.length < batchSize) {
+				// No more documents
+				break;
+			}
+			offset += batchSize;
+		}
+
+		return allDocuments;
+	}
+
+	async getDocumentsWithFilter(
+		indexName: string,
+		filter: string,
+		batchSize = 1000,
+	): Promise<SearchDocument[]> {
+		const index = this.client.index<SearchDocument>(indexName);
+		const allDocuments: SearchDocument[] = [];
+		let offset = 0;
+
+		// Paginate through all matching documents
+		while (true) {
+			const result = await index.getDocuments({ limit: batchSize, offset, filter });
+			allDocuments.push(...result.results);
+
+			if (result.results.length < batchSize) {
+				break;
+			}
+			offset += batchSize;
+		}
+
+		return allDocuments;
+	}
+
+	async ensureAtomsIndex(indexName: string): Promise<void> {
+		const atomsIndexName = `${indexName}-atoms`;
+
+		// Check if index already exists
+		try {
+			await this.client.getIndex(atomsIndexName);
+			// Index exists, nothing to do
+			return;
+		} catch {
+			// Index doesn't exist, create it
+		}
+
+		const task = await this.client.createIndex(atomsIndexName, { primaryKey: 'id' });
+		await this.client.waitForTask(task.taskUid);
+
+		const index = this.client.index(atomsIndexName);
+		const settingsTask = await index.updateSettings({
+			searchableAttributes: ['content'],
+			filterableAttributes: ['doc_id', 'created_at'],
+			sortableAttributes: ['created_at'],
+		});
+		await this.client.waitForTask(settingsTask.taskUid);
+	}
+
+	async recreateAtomsIndex(indexName: string): Promise<void> {
+		const atomsIndexName = `${indexName}-atoms`;
+
+		try {
+			await this.client.deleteIndex(atomsIndexName);
+		} catch {
+			// Index might not exist, that's okay
+		}
+
+		const task = await this.client.createIndex(atomsIndexName, { primaryKey: 'id' });
+		await this.client.waitForTask(task.taskUid);
+
+		const index = this.client.index(atomsIndexName);
+		const settingsTask = await index.updateSettings({
+			searchableAttributes: ['content'],
+			filterableAttributes: ['doc_id', 'created_at'],
+			sortableAttributes: ['created_at'],
+		});
+		await this.client.waitForTask(settingsTask.taskUid);
+	}
+
+	/** @deprecated Use ensureAtomsIndex for non-destructive or recreateAtomsIndex for forced recreation */
+	async createAtomsIndex(indexName: string): Promise<void> {
+		return this.recreateAtomsIndex(indexName);
+	}
+
+	async addAtoms(indexName: string, atoms: Atom[]): Promise<void> {
+		const atomsIndexName = `${indexName}-atoms`;
+		const index = this.client.index(atomsIndexName);
+		const task = await index.addDocuments(atoms);
+		const result = await this.client.waitForTask(task.taskUid);
+
+		// Check if task failed
+		if (result.status === 'failed') {
+			throw new Error(`Failed to add atoms: ${result.error?.message || 'Unknown error'}`);
+		}
+	}
+
+	async searchAtoms(
+		indexName: string,
+		query: string,
+		limit = 10,
+	): Promise<Array<Atom & { _formatted?: { content?: string } }>> {
+		const atomsIndexName = `${indexName}-atoms`;
+		const index = this.client.index<Atom>(atomsIndexName);
+
+		const response = await index.search(query, {
+			limit,
+			attributesToHighlight: ['content'],
+			highlightPreTag: '',
+			highlightPostTag: '',
+		});
+
+		return response.hits;
+	}
+
+	async deleteAtomsForDocument(indexName: string, docId: string): Promise<void> {
+		const atomsIndexName = `${indexName}-atoms`;
+		const index = this.client.index<Atom>(atomsIndexName);
+
+		try {
+			const task = await index.deleteDocuments({
+				filter: `doc_id = "${escapeFilterValue(docId)}"`,
+			});
+			await this.client.waitForTask(task.taskUid);
+		} catch {
+			// Index or documents might not exist
+		}
+	}
+
+	async getAtomsForDocument(indexName: string, docId: string): Promise<string[]> {
+		const atomsIndexName = `${indexName}-atoms`;
+		const index = this.client.index<Atom>(atomsIndexName);
+
+		try {
+			const response = await index.search('', {
+				filter: `doc_id = "${escapeFilterValue(docId)}"`,
+				limit: 100, // Get up to 100 atoms per document
+			});
+
+			return response.hits.map((atom) => atom.content);
+		} catch {
+			// Index might not exist or no atoms for this document
+			return [];
+		}
 	}
 
 	get meiliClient(): MeiliSearch {

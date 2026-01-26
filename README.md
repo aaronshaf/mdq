@@ -37,11 +37,13 @@ md search "query"
 ## CLI
 
 ```
-md status             Check if Meilisearch is running
-md search <query>     Search indexed content
-md search index       Build/rebuild index (always full reindex)
-md search status      Check index status
-md mcp [sources...]   Start MCP server
+md status                Check if Meilisearch is running
+md search <query>        Search indexed content
+md search index          Build/rebuild index (always full reindex)
+md search status         Check index status
+md smart-index           LLM-powered enhancement (summaries, atoms, relationships)
+md smart-index status    Check LLM and Meilisearch connectivity
+md mcp [sources...]      Start MCP server
 ```
 
 ### Options
@@ -77,6 +79,101 @@ md search "auth"
 md search "" --labels api,docs --limit 20
 md search "" --stale 90d
 md search "api" --json
+```
+
+## Smart Indexing (LLM-Powered)
+
+Enhance your markdown index with AI-generated summaries, semantic atoms, and document relationships.
+
+### Prerequisites
+
+1. **Basic index exists**: Run `md search index --path ~/docs` first
+2. **LLM available**: Ollama (default), Claude, or OpenAI configured
+
+Check readiness:
+```bash
+md smart-index status
+```
+
+### Quick Start
+
+Process all documents automatically:
+```bash
+md smart-index --path ~/docs --verbose
+```
+
+This runs three passes on each document:
+- **Pass 1**: Generate concise summary
+- **Pass 2**: Extract semantic facts (atoms)
+- **Pass 3**: Discover relationships to other docs
+
+### Options
+
+```bash
+--batch-size <n>      Process N documents then stop (useful for large corpora)
+--time-limit <min>    Stop after N minutes
+--reset               Reset and reprocess everything from scratch
+--dry-run             Preview what would be processed
+--verbose             Show detailed progress (recommended)
+```
+
+### Incremental Processing
+
+For large document sets, work in batches:
+```bash
+# Process 20 documents at a time
+md smart-index --path ~/docs --batch-size 20 --verbose
+
+# Run again to process next batch
+md smart-index --path ~/docs --batch-size 20 --verbose
+```
+
+Or use time limits for background processing:
+```bash
+md smart-index --path ~/docs --time-limit 10 --verbose  # 10 minutes
+```
+
+### Automatic Detection
+
+Smart indexing automatically:
+- Detects modified documents (compares `updated_at` vs `smart_indexed_at`)
+- Reprocesses them from Pass 1
+- Processes incomplete documents depth-first (each doc through all passes before moving to next)
+- Runs refinement pass when all docs complete (improves relationships as corpus grows)
+
+### Configuration
+
+Set via environment variables:
+
+```bash
+# Ollama (default)
+export MD_LLM_ENDPOINT="http://localhost:11434/v1"
+export MD_LLM_MODEL="qwen2.5:7b"
+
+# Claude
+export MD_LLM_ENDPOINT="https://api.anthropic.com/v1"
+export MD_LLM_MODEL="claude-3-5-sonnet-20241022"
+export MD_LLM_API_KEY="your-key"
+
+# OpenAI
+export MD_LLM_ENDPOINT="https://api.openai.com/v1"
+export MD_LLM_MODEL="gpt-4"
+export MD_LLM_API_KEY="your-key"
+```
+
+### Workflow
+
+```bash
+# Initial setup
+md search index --path ~/docs
+md smart-index --path ~/docs --verbose
+
+# After adding/modifying docs
+md search index --path ~/docs              # reindex
+md smart-index --path ~/docs --verbose     # auto-detects changes
+
+# Periodic refinement (improves relationships)
+md smart-index --path ~/docs --verbose
 ```
 
 ## Frontmatter

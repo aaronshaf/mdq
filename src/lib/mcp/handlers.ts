@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { parseMarkdownFile } from '../markdown/index.js';
-import { type SearchClient, deriveIndexName } from '../search/index.js';
+import { type SearchClient, deriveIndexName, groupAtomsByDocument } from '../search/index.js';
 import type { Source } from './sources.js';
 import type {
 	ReadToolInput,
@@ -90,6 +90,9 @@ export async function handleSearch(
 					created_at: r.created_at,
 					updated_at: r.updated_at,
 					child_count: r.child_count,
+					summary: r.summary,
+					related_ids: r.related_ids,
+					atoms: r.atoms,
 					source: source.name,
 				})),
 				total: response.total,
@@ -133,6 +136,96 @@ export async function handleSearch(
 	// If all sources failed, throw an error
 	if (errors.length === sourcesToSearch.length && sourcesToSearch.length > 0) {
 		throw new Error(`All sources failed: ${errors.join('; ')}`);
+	}
+
+	// Search atoms if requested
+	if (input.search_atoms) {
+		const atomSearchPromises = sourcesToSearch.map(async (source) => {
+			const indexName = deriveIndexName(source.path);
+			try {
+				const atomHits = await client.searchAtoms(indexName, input.query, input.limit ?? 10);
+
+				// Group atoms by document and get unique doc IDs
+				const atomsByDoc = groupAtomsByDocument(atomHits);
+				const docIds = Array.from(atomsByDoc.keys());
+
+				// Fetch parent documents that aren't already in results
+				const existingIds = new Set(limitedResults.map((r) => r.id));
+				const newDocIds = docIds.filter((id) => !existingIds.has(id));
+
+				for (const docId of newDocIds) {
+					const doc = await client.getDocumentById(indexName, docId);
+					if (doc) {
+						limitedResults.push({
+							id: doc.id,
+							title: doc.title,
+							path: doc.path,
+							labels: doc.labels,
+							author_email: doc.author_email,
+							created_at: doc.created_at,
+							updated_at: doc.updated_at,
+							child_count: doc.child_count,
+							summary: doc.summary,
+							related_ids: doc.related_ids,
+							atoms: await client.getAtomsForDocument(indexName, docId).catch(() => []),
+							source: source.name,
+						});
+					}
+				}
+			} catch {
+				// Atoms index might not exist, continue silently
+			}
+		});
+
+		await Promise.all(atomSearchPromises);
+	}
+
+	// Fetch related documents if requested
+	if (input.include_related) {
+		const relatedIds = new Set<string>();
+		const existingIds = new Set(limitedResults.map((r) => r.id));
+
+		// Collect all related IDs from current results
+		for (const result of limitedResults) {
+			if (result.related_ids) {
+				for (const relId of result.related_ids) {
+					if (!existingIds.has(relId)) {
+						relatedIds.add(relId);
+					}
+				}
+			}
+		}
+
+		// Fetch related documents
+		if (relatedIds.size > 0) {
+			for (const source of sourcesToSearch) {
+				const indexName = deriveIndexName(source.path);
+				for (const relId of relatedIds) {
+					try {
+						const doc = await client.getDocumentById(indexName, relId);
+						if (doc && !existingIds.has(doc.id)) {
+							limitedResults.push({
+								id: doc.id,
+								title: doc.title,
+								path: doc.path,
+								labels: doc.labels,
+								author_email: doc.author_email,
+								created_at: doc.created_at,
+								updated_at: doc.updated_at,
+								child_count: doc.child_count,
+								summary: doc.summary,
+								related_ids: doc.related_ids,
+								atoms: await client.getAtomsForDocument(indexName, relId).catch(() => []),
+								source: source.name,
+							});
+							existingIds.add(doc.id);
+						}
+					} catch {
+						// Document might not exist in this source, continue
+					}
+				}
+			}
+		}
 	}
 
 	return {

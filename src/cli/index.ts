@@ -1,6 +1,7 @@
 import { EXIT_CODES, type MdError, getExitCode } from '../lib/errors.js';
 import { getFormatter } from '../lib/formatters.js';
 import { parseSources } from '../lib/mcp/sources.js';
+import { runEmbedCommand, runEmbedStatusCommand } from './commands/embed.js';
 import { runMcpCommand } from './commands/mcp.js';
 import {
 	runSearchCommand,
@@ -8,7 +9,6 @@ import {
 	runSearchStatusCommand,
 	runStatusCommand,
 } from './commands/search.js';
-import { runSmartIndexAutoCommand, runSmartIndexStatusCommand } from './commands/smart-index.js';
 
 // Read version at module load time - Bun resolves JSON imports synchronously
 import packageJson from '../../package.json';
@@ -47,10 +47,25 @@ interface ParsedArgs {
 		timeLimitMinutes?: number;
 		reset: boolean;
 		dryRun: boolean;
+		// HTTP mode options
+		http: boolean;
+		noAuth: boolean;
+		port?: number;
+		host?: string;
+		apiKey?: string;
 	};
 }
 
-type BooleanFlag = 'help' | 'version' | 'verbose' | 'json' | 'xml' | 'reset' | 'dryRun';
+type BooleanFlag =
+	| 'help'
+	| 'version'
+	| 'verbose'
+	| 'json'
+	| 'xml'
+	| 'reset'
+	| 'dryRun'
+	| 'http'
+	| 'noAuth';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -61,7 +76,9 @@ type StringFlag =
 	| 'updatedBefore'
 	| 'updatedWithin'
 	| 'stale'
-	| 'sort';
+	| 'sort'
+	| 'host'
+	| 'apiKey';
 
 type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
 const VALID_SORT_VALUES = new Set<string>([
@@ -81,6 +98,8 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--xml': 'xml',
 	'--reset': 'reset',
 	'--dry-run': 'dryRun',
+	'--http': 'http',
+	'--no-auth': 'noAuth',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -93,18 +112,16 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--updated-before': 'updatedBefore',
 	'--updated-within': 'updatedWithin',
 	'--stale': 'stale',
+	'--host': 'host',
+	'--api-key': 'apiKey',
 };
 
 function handlePositionalArg(result: ParsedArgs, arg: string): void {
 	if (!result.command) {
 		result.command = arg;
-	} else if (
-		!result.subcommand &&
-		result.command === 'search' &&
-		(arg === 'index' || arg === 'status')
-	) {
+	} else if (!result.subcommand && result.command === 'search' && arg === 'status') {
 		result.subcommand = arg;
-	} else if (!result.subcommand && result.command === 'smart-index' && arg === 'status') {
+	} else if (!result.subcommand && result.command === 'embed' && arg === 'status') {
 		result.subcommand = arg;
 	} else {
 		result.positional.push(arg);
@@ -181,6 +198,16 @@ function tryParseFlag(
 		return 2;
 	}
 
+	if (arg === '--port' && nextArg !== undefined) {
+		const port = Number.parseInt(nextArg, 10);
+		if (Number.isNaN(port) || port < 1 || port > 65535) {
+			console.error('Error: --port must be a number between 1 and 65535');
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.port = port;
+		return 2;
+	}
+
 	return 0;
 }
 
@@ -197,6 +224,8 @@ function parseArgs(args: string[]): ParseResult {
 			xml: false,
 			reset: false,
 			dryRun: false,
+			http: false,
+			noAuth: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -253,33 +282,36 @@ function parseArgs(args: string[]): ParseResult {
 	return { parsed: result, unknownFlags };
 }
 
-function printHelp(): void {
-	console.log(`md - Markdown file indexer and search CLI
+function printHelp(command?: string): void {
+	switch (command) {
+		case 'status':
+			console.log(`md status - Check if Meilisearch is running
 
 USAGE:
-  md <command> [options]
+  md status [options]
 
-COMMANDS:
-  status             Check if Meilisearch is running
-  search <query>     Search indexed markdown content
-  search index       Build/rebuild the search index
-  search status      Check Meilisearch connection and index status
-  smart-index        Run LLM-powered smart indexing (summaries, atoms, relationships)
-  smart-index status Check LLM and Meilisearch connectivity
-  mcp [sources...]   Start MCP server for AI assistant integration
-
-GLOBAL OPTIONS:
-  -h, --help         Show this help message
-  -v, --version      Show version number
-  --verbose          Enable verbose output
+OPTIONS:
   --json             Output in JSON format
   --xml              Output in XML format
-  --path <dir>       Directory to search/index (default: current directory)
 
-SEARCH OPTIONS:
-  --limit <n>        Maximum results to return (default: 10)
-  --labels <list>    Filter by labels (comma-separated, OR logic)
-  --author <email>   Filter by author email
+EXAMPLES:
+  md status
+  md status --json
+`);
+			break;
+
+		case 'search':
+			console.log(`md search - Search indexed markdown content
+
+USAGE:
+  md search <query> [options]
+  md search status    Check index status
+
+OPTIONS:
+  --path <dir>             Directory to search (default: current directory)
+  --limit <n>              Maximum results to return (default: 10)
+  --labels <list>          Filter by labels (comma-separated, OR logic)
+  --author <email>         Filter by author email
   --created-after <date>   Filter: created after date (YYYY-MM-DD)
   --created-before <date>  Filter: created before date (YYYY-MM-DD)
   --created-within <dur>   Filter: created within duration (e.g., 30d, 2w, 3m, 1y)
@@ -288,44 +320,132 @@ SEARCH OPTIONS:
   --updated-within <dur>   Filter: updated within duration (e.g., 7d, 2w, 1m)
   --stale <dur>            Filter: NOT updated within duration (find stale content)
   --sort <field>           Sort order: created_at, -created_at, updated_at, -updated_at
+  --json                   Output in JSON format
+  --xml                    Output in XML format
 
-SMART-INDEX OPTIONS:
-  --batch-size <n>   Max documents to process per run (default: unlimited)
-  --time-limit <min> Max time to run in minutes (default: unlimited)
-  --reset            Reset and reprocess all documents from scratch
-  --dry-run          Show what would be processed without making changes
+EXAMPLES:
+  md search "authentication"
+  md search "" --labels api,docs --limit 5
+  md search "old" --stale 90d
+  md search status
+`);
+			break;
+
+		case 'index':
+			console.log(`md index - Build/rebuild the search index
+
+USAGE:
+  md index [options]
+
+OPTIONS:
+  --path <dir>       Directory to index (default: current directory)
+  --verbose          Enable verbose output
+  --json             Output in JSON format
+  --xml              Output in XML format
+
+EXAMPLES:
+  md index
+  md index --path ~/docs
+  md index --path ~/docs --verbose
+`);
+			break;
+
+		case 'embed':
+			console.log(`md embed - Generate embeddings for semantic search
+
+USAGE:
+  md embed [options]
+  md embed status    Check embedding service and Meilisearch connectivity
+
+OPTIONS:
+  --path <dir>         Directory to process (default: current directory)
+  --batch-size <n>     Max documents to process per run (default: unlimited)
+  --time-limit <min>   Max time to run in minutes (default: unlimited)
+  --reset              Reset and reprocess all documents from scratch
+  --dry-run            Show what would be processed without making changes
+  --verbose            Enable verbose output
+  --json               Output in JSON format
+  --xml                Output in XML format
 
 NOTES:
+  - Documents are chunked and each chunk is embedded for semantic search
   - Without --batch-size or --time-limit, processes all remaining documents
   - With either limit, stops when limit reached or no more work to do
-  - Automatically detects which documents need work (depth-first processing)
-  - When all documents complete, re-runs relationship detection for refinement
+  - Automatically detects which documents need embedding
 
-MCP OPTIONS:
+EXAMPLES:
+  md embed --path ~/docs --verbose
+  md embed --path ~/docs --batch-size 50 --verbose
+  md embed --path ~/docs --time-limit 5 --verbose
+  md embed --path ~/docs --reset --verbose
+  md embed status
+`);
+			break;
+
+		case 'mcp':
+			console.log(`md mcp - Start MCP server for AI assistant integration
+
+USAGE:
+  md mcp [sources...] [options]
+
+SOURCE FORMATS:
+  ~/docs                           Single directory
+  ~/docs ~/wiki ~/notes            Multiple directories
+  -s <path> -d <description>       Directory with description
+  name:~/path                      Named directory
+
+OPTIONS:
   -s, --source <path>      Add a source directory (can use name:path format)
-  -d, --desc <text>        Description for the preceding source (helps AI know when to search)
+  -d, --desc <text>        Description for the preceding source
 
-ENVIRONMENT VARIABLES:
-  MD_LLM_ENDPOINT    LLM API endpoint (default: http://localhost:11434/v1 for Ollama)
-  MD_LLM_MODEL       LLM model name (default: qwen2.5:7b)
-  MD_LLM_API_KEY     API key for Claude/OpenAI
+HTTP MODE OPTIONS:
+  --http                   Enable HTTP transport (for remote access)
+  --port <number>          Port to bind (default: 3000)
+  --host <string>          Host to bind (default: 127.0.0.1)
+  --api-key <string>       API key for authentication (or set MD_MCP_API_KEY)
+  --no-auth                Disable authentication (for testing only)
+
+EXAMPLES:
+  md mcp ~/docs
+  md mcp ~/docs ~/wiki ~/notes
+  md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+
+  # HTTP mode for remote access
+  export MD_MCP_API_KEY="your-secret-key-here"
+  md mcp --http ~/docs
+  md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+`);
+			break;
+
+		default:
+			console.log(`md - Markdown file indexer and search CLI
+
+USAGE:
+  md <command> [options]
+
+COMMANDS:
+  status             Check if Meilisearch is running
+  search <query>     Search indexed markdown content
+  search status      Check Meilisearch connection and index status
+  index              Build/rebuild the search index
+  embed              Generate embeddings for semantic search
+  embed status       Check embedding service and Meilisearch connectivity
+  mcp [sources...]   Start MCP server for AI assistant integration
+
+GLOBAL OPTIONS:
+  -h, --help         Show this help message
+  -v, --version      Show version number
+
+Run "md <command> --help" for command-specific help.
 
 EXAMPLES:
   md status
   md search "authentication"
-  md search "" --labels api,docs --limit 5
-  md search "old" --stale 90d
-  md search index --path ~/docs
-  md search status
-  md smart-index --path ~/docs --verbose
-  md smart-index --path ~/docs --batch-size 50 --verbose
-  md smart-index --path ~/docs --time-limit 5 --verbose
-  md smart-index --path ~/docs --reset --verbose
+  md index --path ~/docs
+  md embed --path ~/docs --verbose
   md mcp ~/docs
-  md mcp ~/docs ~/wiki ~/notes
-  md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
-  md mcp -s notes:~/notes -d "Journal" -s eng:~/docs/eng -d "Engineering docs"
 `);
+	}
 }
 
 function printVersion(): void {
@@ -343,12 +463,6 @@ async function handleSearchCommand(
 	basePath: string,
 	formatter: ReturnType<typeof getFormatter>,
 ): Promise<void> {
-	if (parsed.subcommand === 'index') {
-		const result = await runSearchIndexCommand(basePath, parsed.options.verbose);
-		console.log(formatter.format(result));
-		return;
-	}
-
 	if (parsed.subcommand === 'status') {
 		const result = await runSearchStatusCommand(basePath);
 		console.log(formatter.format(result));
@@ -392,9 +506,14 @@ export async function run(args: string[]): Promise<void> {
 		process.exit(EXIT_CODES.SUCCESS);
 	}
 
-	if (parsed.options.help || !parsed.command) {
+	if (parsed.options.help) {
+		printHelp(parsed.command || undefined);
+		process.exit(EXIT_CODES.SUCCESS);
+	}
+
+	if (!parsed.command) {
 		printHelp();
-		process.exit(parsed.options.help ? EXIT_CODES.SUCCESS : EXIT_CODES.INVALID_ARGS);
+		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
 	// Warn about unknown flags
@@ -419,6 +538,12 @@ export async function run(args: string[]): Promise<void> {
 			case 'search':
 				await handleSearchCommand(parsed, basePath, formatter);
 				break;
+
+			case 'index': {
+				const result = await runSearchIndexCommand(basePath, parsed.options.verbose);
+				console.log(formatter.format(result));
+				break;
+			}
 
 			case 'mcp': {
 				// Build source args from -s/-d flags and positional args
@@ -450,22 +575,53 @@ export async function run(args: string[]): Promise<void> {
 					process.exit(EXIT_CODES.INVALID_ARGS);
 				}
 
-				await runMcpCommand(sources);
+				// Handle HTTP mode options
+				let httpOptions:
+					| {
+							enabled: boolean;
+							port: number;
+							host: string;
+							apiKey: string;
+							noAuth: boolean;
+					  }
+					| undefined;
+
+				if (parsed.options.http) {
+					// Get API key from flag or environment
+					const apiKey = parsed.options.apiKey ?? process.env.MD_MCP_API_KEY ?? '';
+
+					// Get port from flag, environment, or default
+					const port =
+						parsed.options.port ??
+						(process.env.MD_MCP_PORT ? Number.parseInt(process.env.MD_MCP_PORT, 10) : 3000);
+
+					// Get host from flag, environment, or default (localhost-only)
+					const host = parsed.options.host ?? process.env.MD_MCP_HOST ?? '127.0.0.1';
+
+					httpOptions = {
+						enabled: true,
+						port,
+						host,
+						apiKey,
+						noAuth: parsed.options.noAuth,
+					};
+				}
+
+				await runMcpCommand(sources, httpOptions);
 				break;
 			}
 
-			case 'smart-index': {
+			case 'embed': {
 				if (parsed.subcommand === 'status') {
-					const result = await runSmartIndexStatusCommand(basePath);
+					const result = await runEmbedStatusCommand(basePath);
 					console.log(formatter.format(result));
-					if (!result.meiliHealthy || !result.llmHealthy) {
+					if (!result.meiliHealthy || !result.embeddingHealthy) {
 						process.exit(EXIT_CODES.CONNECTION_ERROR);
 					}
 					break;
 				}
 
-				// Always use automatic mode
-				await runSmartIndexAutoCommand(basePath, {
+				const result = await runEmbedCommand(basePath, {
 					batchSize: parsed.options.batchSize,
 					timeLimitMinutes: parsed.options.timeLimitMinutes,
 					reset: parsed.options.reset,
@@ -473,7 +629,8 @@ export async function run(args: string[]): Promise<void> {
 					verbose: parsed.options.verbose,
 				});
 
-				// Results are already logged during execution in verbose mode
+				// Always output result summary
+				console.log(formatter.format(result));
 				break;
 			}
 

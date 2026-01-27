@@ -91,9 +91,6 @@ export async function handleSearch(
 					updated_at: r.updated_at,
 					child_count: r.child_count,
 					reference: r.reference,
-					summary: r.summary,
-					related_ids: r.related_ids,
-					atoms: r.atoms,
 					source: source.name,
 				})),
 				total: response.total,
@@ -137,54 +134,6 @@ export async function handleSearch(
 	// If all sources failed, throw an error
 	if (errors.length === sourcesToSearch.length && sourcesToSearch.length > 0) {
 		throw new Error(`All sources failed: ${errors.join('; ')}`);
-	}
-
-	// Fetch related documents if requested
-	if (input.include_related) {
-		const relatedIds = new Set<string>();
-		const existingIds = new Set(limitedResults.map((r) => r.id));
-
-		// Collect all related IDs from current results
-		for (const result of limitedResults) {
-			if (result.related_ids) {
-				for (const relId of result.related_ids) {
-					if (!existingIds.has(relId)) {
-						relatedIds.add(relId);
-					}
-				}
-			}
-		}
-
-		// Fetch related documents
-		if (relatedIds.size > 0) {
-			for (const source of sourcesToSearch) {
-				const indexName = deriveIndexName(source.path);
-				for (const relId of relatedIds) {
-					try {
-						const doc = await client.getDocumentById(indexName, relId);
-						if (doc && !existingIds.has(doc.id)) {
-							limitedResults.push({
-								id: doc.id,
-								title: doc.title,
-								path: doc.path,
-								labels: doc.labels,
-								author_email: doc.author_email,
-								created_at: doc.created_at,
-								updated_at: doc.updated_at,
-								child_count: doc.child_count,
-								summary: doc.summary,
-								related_ids: doc.related_ids,
-								atoms: doc.atoms,
-								source: source.name,
-							});
-							existingIds.add(doc.id);
-						}
-					} catch {
-						// Document might not exist in this source, continue
-					}
-				}
-			}
-		}
 	}
 
 	return {
@@ -259,9 +208,7 @@ export async function handleRead(
 
 			// Extract reference if present
 			const reference =
-				typeof parsed.frontmatter.reference === 'string'
-					? parsed.frontmatter.reference
-					: undefined;
+				typeof parsed.frontmatter.reference === 'string' ? parsed.frontmatter.reference : undefined;
 
 			return {
 				id: parsed.id,

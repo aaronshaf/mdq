@@ -61,10 +61,25 @@ export class Logger {
 		}
 	}
 
+	/** Single-line document progress with result */
+	documentProgress(current: number, total: number, title: string, result: string): void {
+		if (this.verbose) {
+			const progress = chalk.dim(`[${current}/${total}]`);
+			console.log(`${progress} ${title} ${result}`);
+		}
+	}
+
 	passCompact(pass: number, passName: string, result: string): void {
 		if (this.verbose) {
 			const passLabel = chalk.dim(`  Pass ${pass} (${passName}):`);
 			console.log(`${passLabel} ${result}`);
+		}
+	}
+
+	/** Simple indented result line (no pass prefix) */
+	result(message: string): void {
+		if (this.verbose) {
+			console.log(`  ${message}`);
 		}
 	}
 

@@ -17,17 +17,24 @@ export {
 	shouldIgnore,
 } from './mdignore.js';
 export {
+	Embedder,
+	createEmbedder,
+	// Legacy aliases
 	SmartIndexer,
 	createSmartIndexer,
-	Pass,
+	type EmbedOptions,
 	type SmartIndexOptions,
 } from './smart-indexer.js';
+export { chunkText, estimateTokens, type Chunk, type ChunkOptions } from './chunker.js';
 export type {
+	ChunkDocument,
+	EmbedResult,
 	IndexResult,
 	IndexStatus,
 	SearchDocument,
 	SearchOptions,
 	SearchResponse,
 	SearchResult,
-	SmartIndexResult,
+	// Legacy alias
+	EmbedResult as SmartIndexResult,
 } from './types.js';

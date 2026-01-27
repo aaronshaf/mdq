@@ -9,12 +9,23 @@ export interface SearchDocument {
 	updated_at?: number;
 	child_count?: number;
 	reference?: string; // Chicago-style citation for the source
-	// Smart indexing fields
-	summary?: string;
-	atoms?: string[];
-	related_ids?: string[];
-	smart_indexed_at?: number;
-	pass_level?: number;
+	// Embedding fields
+	embedded_at?: number;
+	chunk_count?: number;
+}
+
+export interface ChunkDocument {
+	id: string; // "{parent_id}_chunk_{index}"
+	parent_id: string; // Reference to parent document
+	parent_title: string; // Denormalized for display
+	parent_path: string; // Denormalized for filtering
+	chunk_index: number; // Position in parent (0-based)
+	content: string; // Chunk text
+	labels?: string[];
+	author_email?: string;
+	created_at?: number;
+	updated_at?: number;
+	_vectors: { default: number[] };
 }
 
 export interface SearchOptions {
@@ -43,10 +54,6 @@ export interface SearchResult {
 	updated_at?: number;
 	child_count?: number;
 	reference?: string; // Chicago-style citation for the source
-	// Smart indexing fields
-	summary?: string;
-	related_ids?: string[];
-	atoms?: string[]; // Array of atom content strings
 }
 
 export interface SearchResponse {
@@ -68,10 +75,12 @@ export interface IndexResult {
 	indexName: string;
 }
 
-export interface SmartIndexResult {
-	pass: number;
-	processed: number;
-	total: number;
+export interface EmbedResult {
+	documentsProcessed: number;
+	documentsSkipped: number;
+	documentsFailed: number;
+	chunksCreated: number;
+	durationMs: number;
 	indexName: string;
-	atomsCreated?: number;
+	chunksIndexName: string;
 }

@@ -89,6 +89,8 @@ interface SearchDocument {
   // Display fields
   local_path: string      // Relative path from index root
   url: string | null      // Source URL if in frontmatter
+  reference: string | null // Citation string for source attribution
+  child_count: number | null // Number of child pages (for hub detection)
 
   // Embedding fields (optional - from md embed)
   embedded_at: number | null    // Timestamp when embeddings were generated

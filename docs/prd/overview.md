@@ -59,6 +59,7 @@ md works with any YAML frontmatter. These fields are recognized when present:
 | `url` | string | Source URL (for display) |
 | `page_id` | string | Unique ID (or derived from file path) |
 | `child_count` | number | Number of direct child pages |
+| `reference` | string | Citation string for source attribution |
 
 Documents with missing fields are still indexed - filters simply won't match them.
 

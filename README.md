@@ -47,6 +47,10 @@ md mcp ~/docs
 # Multiple directories with descriptions
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
+# HTTP mode for remote access (Claude web UI)
+export MD_MCP_API_KEY="$(openssl rand -hex 32)"
+md mcp --http ~/docs
+
 # Add to Claude Code
 claude mcp add kb -- md mcp ~/docs
 ```

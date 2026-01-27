@@ -263,8 +263,8 @@ md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 
 | Tool | Description |
 |------|-------------|
-| `search` | Query with filters, returns snippets (200 chars) |
-| `read_page` | Read full content by path or id |
+| `search` | Query with filters, returns snippets. Use `source` param to filter by source. |
+| `read_page` | Read full content by path or id. Use `source` param when multiple sources share paths. |
 
 ### Claude Code CLI
 
@@ -361,8 +361,18 @@ page_id: custom-id
 labels: [api, docs]
 author_email: user@example.com
 child_count: 5
+reference: "Author, Title, Publication, Date"
 ---
 ```
+
+| Field | Description |
+|-------|-------------|
+| `title` | Page title (or derived from first `# heading` or filename) |
+| `page_id` | Unique ID (or derived from sanitized path) |
+| `labels` | Array of labels for filtering |
+| `author_email` | Author email for filtering |
+| `child_count` | Number of child pages (for hub detection) |
+| `reference` | Chicago-style citation for source attribution |
 
 **Derivation rules:**
 - Title: `frontmatter.title` > first `# heading` > filename

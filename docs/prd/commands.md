@@ -138,13 +138,13 @@ Indexed 142 documents in 1.2s
 
 **Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdignore` are automatically excluded.
 
-### md summarize
+### md embed
 
 Generate AI summaries and vector embeddings for semantic search.
 
 ```
-md summarize [options]
-md summarize status    Check LLM and Meilisearch connectivity
+md embed [options]
+md embed status    Check LLM and Meilisearch connectivity
 ```
 
 **Options:**
@@ -162,19 +162,19 @@ md summarize status    Check LLM and Meilisearch connectivity
 
 ```bash
 # Process all documents
-md summarize --path ~/docs --verbose
+md embed --path ~/docs --verbose
 
 # Process in batches
-md summarize --path ~/docs --batch-size 50 --verbose
+md embed --path ~/docs --batch-size 50 --verbose
 
 # Time-limited processing
-md summarize --path ~/docs --time-limit 10 --verbose
+md embed --path ~/docs --time-limit 10 --verbose
 
 # Reset and reprocess
-md summarize --path ~/docs --reset --verbose
+md embed --path ~/docs --reset --verbose
 
 # Check status
-md summarize status
+md embed status
 ```
 
 **Output (verbose):**

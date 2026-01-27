@@ -25,10 +25,10 @@ Options evaluated:
 
 ## Decision
 
-Implement **smart indexing** via `md summarize` command that:
+Implement **smart indexing** via `md embed` command that:
 
 1. **Generates summaries** using a configurable LLM (default: Ollama with qwen2.5:7b)
-2. **Generates embeddings** using a configurable embedding model (default: Ollama with all-minilm)
+2. **Generates embeddings** using a configurable embedding model (default: Ollama with nomic-embed-text)
 3. **Stores in Meilisearch** alongside existing document content
 4. **Enables hybrid search** automatically when embeddings exist
 
@@ -37,7 +37,7 @@ Implement **smart indexing** via `md summarize` command that:
 md index --path ~/docs
 
 # Add summaries and embeddings
-md summarize --path ~/docs --verbose
+md embed --path ~/docs --verbose
 
 # Search uses hybrid mode automatically
 md search "authentication concepts"
@@ -88,7 +88,7 @@ md search "authentication concepts"
 
 ### Mitigations
 
-- `md summarize status` verifies LLM/embedding connectivity
+- `md embed status` verifies LLM/embedding connectivity
 - Batch processing with `--batch-size` and `--time-limit`
 - Incremental updates (only processes changed documents)
 - `--reset` flag to reprocess everything if needed
@@ -117,8 +117,8 @@ export MD_LLM_API_KEY=""  # Only for cloud providers
 
 # Embedding model
 export MD_EMBEDDING_ENDPOINT="http://localhost:11434"
-export MD_EMBEDDING_MODEL="all-minilm:latest"
-export MD_EMBEDDING_DIMENSIONS="384"
+export MD_EMBEDDING_MODEL="nomic-embed-text:latest"
+export MD_EMBEDDING_DIMENSIONS="768"
 ```
 
 ### Processing flow
@@ -134,4 +134,4 @@ export MD_EMBEDDING_DIMENSIONS="384"
 
 - [Meilisearch Vector Search](https://www.meilisearch.com/docs/learn/experimental/vector_search)
 - [Ollama](https://ollama.ai/)
-- [all-minilm embedding model](https://ollama.ai/library/all-minilm)
+- [nomic-embed-text embedding model](https://ollama.ai/library/nomic-embed-text)

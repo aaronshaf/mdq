@@ -19,7 +19,7 @@ Users need fast, typo-tolerant, offline search across their markdown content wit
 | Offline capable | Search works without network | 100% offline |
 | Filterable | Filter by labels, author, date | Supported (when metadata present) |
 | Source agnostic | Work with markdown from any source | cn, git, manual, etc. |
-| Semantic search | Find by meaning, not just keywords | Optional (via `md summarize`) |
+| Semantic search | Find by meaning, not just keywords | Optional (via `md embed`) |
 
 ## Non-Goals
 
@@ -90,7 +90,7 @@ interface SearchDocument {
   local_path: string      // Relative path from index root
   url: string | null      // Source URL if in frontmatter
 
-  // Smart indexing fields (optional - from md summarize)
+  // Smart indexing fields (optional - from md embed)
   summary: string | null        // AI-generated summary
   _vectors: object | null       // Embedding vector for semantic search
   smart_indexed_at: number | null
@@ -150,7 +150,7 @@ Sanitization: lowercase, replace non-alphanumeric with hyphen.
 
 ## Hybrid Search
 
-When documents have embeddings (via `md summarize`), search automatically uses hybrid mode:
+When documents have embeddings (via `md embed`), search automatically uses hybrid mode:
 
 1. **Keyword search**: Traditional full-text with typo tolerance
 2. **Semantic search**: Vector similarity using embeddings
@@ -248,7 +248,7 @@ src/
 └── cli/
     └── commands/
         ├── search.ts          # md search command
-        └── smart-index.ts     # md summarize command
+        └── embed.ts           # md embed command
 ```
 
 ### Dependencies

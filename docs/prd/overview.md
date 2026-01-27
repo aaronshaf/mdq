@@ -41,8 +41,8 @@
 | `md search <query>` | Search indexed content |
 | `md search status` | Check index status |
 | `md index` | Build/rebuild the search index |
-| `md summarize` | Generate AI summaries and embeddings |
-| `md summarize status` | Check LLM and embedding connectivity |
+| `md embed` | Generate AI summaries and embeddings |
+| `md embed status` | Check LLM and embedding connectivity |
 | `md mcp [sources...]` | Start MCP server for AI assistants |
 
 ## Frontmatter Support
@@ -98,7 +98,7 @@ Found 3 results for "authentication"
 ### Add Semantic Search
 
 ```
-$ md summarize --path ~/docs/wiki --verbose
+$ md embed --path ~/docs/wiki --verbose
 Processing 142 documents...
   [1/142] Authentication Guide - generating summary...
   [1/142] Authentication Guide - generating embedding...

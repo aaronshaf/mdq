@@ -137,17 +137,17 @@ Enhance your index with AI-generated summaries and vector embeddings for semanti
 1. Basic index exists: `md index --path ~/docs`
 2. Ollama running with models:
    - LLM for summaries (default: `qwen2.5:7b`)
-   - Embedding model (default: `all-minilm:latest`)
+   - Embedding model (default: `nomic-embed-text:latest`)
 
 ```bash
-ollama pull all-minilm
-md summarize status    # Check readiness
+ollama pull nomic-embed-text
+md embed status    # Check readiness
 ```
 
 ### Usage
 
 ```bash
-md summarize --path ~/docs --verbose
+md embed --path ~/docs --verbose
 ```
 
 This runs two passes per document:
@@ -170,10 +170,10 @@ Once embeddings exist, `md search` automatically uses hybrid search (keyword + s
 
 ```bash
 # Process in batches
-md summarize --path ~/docs --batch-size 20 --verbose
+md embed --path ~/docs --batch-size 20 --verbose
 
 # Or use time limits
-md summarize --path ~/docs --time-limit 10 --verbose
+md embed --path ~/docs --time-limit 10 --verbose
 ```
 
 ### Configuration
@@ -185,8 +185,8 @@ export MD_LLM_MODEL="qwen2.5:7b"
 
 # Embedding model
 export MD_EMBEDDING_ENDPOINT="http://localhost:11434"
-export MD_EMBEDDING_MODEL="all-minilm:latest"
-export MD_EMBEDDING_DIMENSIONS="384"
+export MD_EMBEDDING_MODEL="nomic-embed-text:latest"
+export MD_EMBEDDING_DIMENSIONS="768"
 
 # For Claude/OpenAI
 export MD_LLM_ENDPOINT="https://api.anthropic.com/v1"
@@ -204,8 +204,8 @@ Local embedding with Ollama. No API key required.
 
 ```bash
 export MD_EMBEDDING_ENDPOINT="http://localhost:11434"
-export MD_EMBEDDING_MODEL="all-minilm:latest"
-export MD_EMBEDDING_DIMENSIONS="384"
+export MD_EMBEDDING_MODEL="nomic-embed-text:latest"
+export MD_EMBEDDING_DIMENSIONS="768"
 ```
 
 Popular Ollama embedding models:
@@ -247,7 +247,7 @@ export MD_EMBEDDING_API_KEY="your-key"
 #### Important Notes
 
 - **Dimensions must match**: Set `MD_EMBEDDING_DIMENSIONS` to your model's output size
-- **Changing models requires reindex**: Meilisearch embedder dimensions are immutable once set. Use `md summarize --reset` after changing models
+- **Changing models requires reindex**: Meilisearch embedder dimensions are immutable once set. Use `md embed --reset` after changing models
 - **API key fallback**: `MD_EMBEDDING_API_KEY` falls back to `MD_LLM_API_KEY` if not set
 - **Provider detection**: Endpoints containing `localhost:11434` use Ollama protocol; all others use OpenAI protocol
 
@@ -362,8 +362,8 @@ ngrok http 3000
 | `MD_LLM_MODEL` | `qwen2.5:7b` | LLM model name |
 | `MD_LLM_API_KEY` | - | LLM API key |
 | `MD_EMBEDDING_ENDPOINT` | `http://localhost:11434` | Embedding endpoint |
-| `MD_EMBEDDING_MODEL` | `all-minilm:latest` | Embedding model |
-| `MD_EMBEDDING_DIMENSIONS` | `384` | Embedding dimensions |
+| `MD_EMBEDDING_MODEL` | `nomic-embed-text:latest` | Embedding model |
+| `MD_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
 | `MD_EMBEDDING_API_KEY` | - | Embedding API key |
 
 **Index naming:** `~/docs/wiki` becomes `md-docs-wiki`

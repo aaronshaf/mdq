@@ -32,7 +32,7 @@ md search "query"
 md status              Check if Meilisearch is running
 md search <query>      Search indexed content
 md index               Build/rebuild index
-md summarize           Generate AI summaries and embeddings
+md embed           Generate AI summaries and embeddings
 md mcp [sources...]    Start MCP server
 ```
 

@@ -8,5 +8,5 @@ Product specifications defining what the software should do, its goals, and desi
 |------|-------------|
 | [overview.md](overview.md) | Project overview, goals, design decisions |
 | [commands.md](commands.md) | CLI command specifications |
-| [search.md](search.md) | Search feature PRD (Meilisearch integration) |
-| [mcp.md](mcp.md) | MCP server PRD |
+| [search.md](search.md) | Search feature PRD (Meilisearch, hybrid search) |
+| [mcp.md](mcp.md) | MCP server PRD (stdio, HTTP, multiple sources) |

@@ -55,9 +55,9 @@ Each result includes:
 - Basic metadata: id, title, path, created_at, updated_at, author_email, labels
 - Content: snippet (excerpt from the document)
 - Citation: reference (Chicago-style citation for the source, if available) - USE THIS FOR FOOTNOTES
-- Smart indexing data (if available): summary, atoms, related_ids
+- Smart indexing data (if available): summary
 
-IMPORTANT: summary and atoms are AI-GENERATED and should NOT be quoted or cited as authoritative. Only quote directly from the document content or snippet. Use the reference field for proper citations.${sourceList}`,
+IMPORTANT: summary is AI-GENERATED and should NOT be quoted or cited as authoritative. Only quote directly from the document content or snippet. Use the reference field for proper citations.${sourceList}`,
 		SearchToolParamsShape,
 		async (params) => {
 			try {
@@ -86,7 +86,6 @@ IMPORTANT: summary and atoms are AI-GENERATED and should NOT be quoted or cited 
 					updated_within: parsed.updated_within,
 					stale: parsed.stale,
 					sort: parsed.sort,
-					include_related: parsed.include_related,
 				});
 
 				return {

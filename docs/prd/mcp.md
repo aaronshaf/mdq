@@ -18,25 +18,25 @@ Users need a way to expose their indexed markdown content directly to AI assista
 | Fast search | Query response time | < 100ms (leverages Meilisearch) |
 | Zero config for users | Setup complexity | Single command to start |
 | Full search parity | Feature coverage | All `md search` filters supported |
+| Multiple sources | Index multiple directories | Supported with descriptions |
+| Remote access | HTTP transport | Supported for Claude web UI |
 
 ## Non-Goals
 
-- HTTP/SSE transport (stdio only for v1)
-- Remote/networked access (local only)
-- MCP Resources (tools only for v1)
+- MCP Resources (tools only)
 - Fallback to grep-style search (Meilisearch required)
 - Writing or modifying files
 
 ## Solution Overview
 
-`md mcp` command launches an MCP server over stdio transport. The server exposes two tools (`search` and `read`) that allow MCP clients to query the local Meilisearch index and read file content.
+`md mcp` command launches an MCP server over stdio or HTTP transport. The server exposes two tools (`search` and `read_page`) that allow MCP clients to query the local Meilisearch index and read file content.
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │   MCP Client    │────▶│     md mcp       │────▶│   Meilisearch   │
 │ (Claude Code)   │stdio│  (MCP Server)    │     │  (localhost)    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                               │
+└─────────────────┘  or └──────────────────┘     └─────────────────┘
+                    HTTP        │
                                ▼
                         ┌──────────────────┐
                         │  Local Markdown  │
@@ -47,13 +47,33 @@ Users need a way to expose their indexed markdown content directly to AI assista
 ## Prerequisites
 
 1. **Meilisearch running** - Same requirement as `md search`
-2. **Index exists** - User must run `md search index` first
+2. **Index exists** - User must run `md index` first
+
+## Multiple Sources
+
+The MCP server can serve multiple directories, each with its own index:
+
+```bash
+# Multiple directories
+md mcp ~/docs ~/wiki ~/notes
+
+# With descriptions (helps AI know when to search each source)
+md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+
+# Explicit names to avoid collisions
+md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
+```
+
+**Name derivation:**
+- Derived from directory basename (e.g., `~/docs/wiki` → `wiki`)
+- Collisions auto-resolve by adding parent path segments
+- Explicit names (e.g., `wiki:~/path`) error on collision
 
 ## MCP Tools
 
 ### search
 
-Search indexed markdown content.
+Search indexed markdown content across one or more sources.
 
 **Input Schema:**
 
@@ -64,6 +84,10 @@ Search indexed markdown content.
     "query": {
       "type": "string",
       "description": "Search query (supports typo tolerance)"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source name to search (optional, searches all if omitted)"
     },
     "limit": {
       "type": "integer",
@@ -134,12 +158,12 @@ Search results include a 200-character snippet of matching content.
       "id": "docs-api-auth",
       "title": "Authentication Guide",
       "path": "docs/api/auth.md",
+      "source": "wiki",
       "snippet": "...handles OAuth2 authentication flows for the API...",
       "labels": ["documentation", "security"],
       "author": "john.doe@example.com",
       "created_at": "2024-01-10T10:00:00Z",
-      "updated_at": "2024-06-15T14:30:00Z",
-      "url": "https://example.com/docs/auth"
+      "updated_at": "2024-06-15T14:30:00Z"
     }
   ],
   "total": 3,
@@ -147,7 +171,7 @@ Search results include a 200-character snippet of matching content.
 }
 ```
 
-### read
+### read_page
 
 Read the full content of a specific file.
 
@@ -159,11 +183,15 @@ Read the full content of a specific file.
   "properties": {
     "path": {
       "type": "string",
-      "description": "Relative path to the markdown file (e.g., 'docs/api/auth.md')"
+      "description": "Relative path to the markdown file"
     },
     "id": {
       "type": "string",
       "description": "Document ID from search results"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source name (required when using path with multiple sources)"
     }
   },
   "oneOf": [
@@ -173,8 +201,6 @@ Read the full content of a specific file.
 }
 ```
 
-**ID Resolution:** When `id` is provided instead of `path`, the tool queries Meilisearch to look up the document's `local_path` field. This adds one extra query but keeps the tool flexible.
-
 **Output:**
 
 ```json
@@ -182,45 +208,83 @@ Read the full content of a specific file.
   "id": "docs-api-auth",
   "title": "Authentication Guide",
   "path": "docs/api/auth.md",
+  "source": "wiki",
   "content": "# Authentication Guide\n\nThis guide covers...",
   "metadata": {
     "labels": ["documentation", "security"],
     "author": "john.doe@example.com",
     "created_at": "2024-01-10T10:00:00Z",
-    "updated_at": "2024-06-15T14:30:00Z",
-    "url": "https://example.com/docs/auth"
+    "updated_at": "2024-06-15T14:30:00Z"
   }
 }
 ```
+
+## Transport Modes
+
+### stdio (default)
+
+For local MCP clients like Claude Code and Claude Desktop:
+
+```bash
+md mcp ~/docs
+```
+
+### HTTP
+
+For remote access from Claude web UI or other HTTP clients:
+
+```bash
+export MD_MCP_API_KEY="$(openssl rand -hex 32)"
+md mcp --http ~/docs
+md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+```
+
+**Configuration:**
+
+| Option | Environment | Default | Description |
+|--------|-------------|---------|-------------|
+| `--port` | `MD_MCP_PORT` | 3000 | Port to bind |
+| `--host` | `MD_MCP_HOST` | 127.0.0.1 | Host to bind |
+| `--api-key` | `MD_MCP_API_KEY` | (required) | Authentication key |
+| `--no-auth` | - | false | Disable auth (testing only) |
+
+**Exposing to internet:**
+
+```bash
+# Cloudflare Tunnel (recommended)
+cloudflared tunnel --url http://localhost:3000
+
+# Or ngrok
+ngrok http 3000
+```
+
+**Connect from Claude web UI:**
+1. Settings > Connectors > "Add custom connector"
+2. URL: `https://your-tunnel-url.com/mcp`
+3. Provide API key when prompted
 
 ## Configuration
 
 ### Claude Code
 
-Add to `~/.claude/mcp.json` or project `.claude/mcp.json`:
+```bash
+# Add via CLI
+claude mcp add kb -- md mcp ~/docs
 
-```json
-{
-  "mcpServers": {
-    "my-docs": {
-      "command": "md",
-      "args": ["mcp", "/path/to/docs"]
-    }
-  }
-}
+# With multiple sources
+claude mcp add kb -- md mcp \
+  -s ~/notes -d "Personal journal" \
+  -s ~/wiki -d "Team docs"
 ```
 
-With custom Meilisearch URL:
+Or add to `~/.claude/mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "my-docs": {
+    "kb": {
       "command": "md",
-      "args": ["mcp", "/path/to/docs"],
-      "env": {
-        "MEILISEARCH_URL": "http://localhost:8080"
-      }
+      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal", "-s", "~/wiki", "-d", "Team docs"]
     }
   }
 }
@@ -233,9 +297,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ```json
 {
   "mcpServers": {
-    "my-docs": {
+    "kb": {
       "command": "md",
-      "args": ["mcp", "/path/to/docs"]
+      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal"]
     }
   }
 }
@@ -248,7 +312,7 @@ Add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "my-docs": {
+    "kb": {
       "command": "md",
       "args": ["mcp", "${workspaceFolder}/docs"]
     }
@@ -262,12 +326,13 @@ Add to `.vscode/mcp.json`:
 
 | Condition | Exit Code | stderr Message |
 |-----------|-----------|----------------|
-| Meilisearch unavailable | 9 | `Error: Meilisearch not available at http://localhost:7700. Start it with: docker run -d -p 7700:7700 getmeili/meilisearch:latest` |
-| Index not found | 10 | `Error: No search index found. Run 'md search index' first.` |
+| Meilisearch unavailable | 9 | `Error: Meilisearch not available` |
+| Index not found | 10 | `Error: No search index found` |
+| No API key (HTTP mode) | 6 | `Error: API key required for HTTP mode` |
 
 ### Tool Errors
 
-Return MCP error responses (not exit codes):
+Return MCP error responses:
 
 | Condition | Error Code | Message |
 |-----------|------------|---------|
@@ -285,8 +350,10 @@ src/
 │   └── mcp/
 │       ├── index.ts           # MCP module exports
 │       ├── server.ts          # McpServer setup and transport
+│       ├── http.ts            # HTTP transport implementation
 │       ├── handlers.ts        # Tool implementations
 │       ├── tools.ts           # Tool schemas
+│       ├── sources.ts         # Multi-source handling
 │       └── types.ts           # MCP-specific types
 └── cli/
     └── commands/
@@ -298,51 +365,21 @@ src/
 ```json
 {
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.25.0"
   }
 }
 ```
 
-### Key Implementation Details
-
-1. **stdio transport**: Use `StdioServerTransport` from SDK
-2. **Logging**: All logs to stderr (stdout reserved for JSON-RPC)
-3. **Graceful shutdown**: Handle SIGINT/SIGTERM to close connections
-4. **Error responses**: Return MCP-compliant error objects
-
 ## Security Considerations
 
-1. **Local only**: stdio transport cannot be accessed remotely
-2. **Read-only**: No tools modify files
-3. **Path validation**: `read` validates paths are within the indexed directory
-4. **No credentials exposed**: MCP responses never include sensitive data
-
-## Testing Strategy
-
-### Unit Tests
-
-- `mcp/server.test.ts` - Server initialization, tool registration
-- `mcp/handlers.test.ts` - Tool input validation, output formatting
-
-### Integration Tests
-
-- End-to-end MCP message flow (mock stdio)
-- Real Meilisearch queries
-- Error handling paths
-
-### Manual Testing
-
-```bash
-# Test with MCP Inspector
-npx @anthropic-ai/mcp-inspector md mcp
-
-# Test with Claude Code
-claude --mcp-config test-mcp.json
-```
+1. **stdio mode**: Cannot be accessed remotely
+2. **HTTP mode**: Requires API key authentication (unless `--no-auth`)
+3. **Read-only**: No tools modify files
+4. **Path validation**: `read_page` validates paths are within indexed directories
+5. **CORS**: Configurable via `MD_MCP_CORS_ORIGIN` (default: `https://claude.ai`)
 
 ## References
 
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification/2025-11-25)
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [MCP Servers Repository](https://github.com/modelcontextprotocol/servers)
 - [md search PRD](./search.md)

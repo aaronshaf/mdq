@@ -2,334 +2,63 @@
 
 CLI for indexing and searching local markdown files via Meilisearch with MCP server support.
 
-## Getting Started
+## Quick Start
 
-### Step 1: Install Bun runtime
+### 1. Install
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
-```
-
-### Step 2: Install md
-
-```bash
 bun install -g @aaronshaf/md
 ```
 
-### Step 3: Start Meilisearch
+### 2. Start Meilisearch
 
 ```bash
-docker run -d -p 7700:7700 getmeili/meilisearch:latest
+docker run -d -p 7700:7700 \
+  -v ~/.meilisearch/data:/meili_data \
+  getmeili/meilisearch:latest
 ```
 
-### Step 4: Index your markdown files
+### 3. Index and Search
 
 ```bash
-md search index --path ~/docs
-```
-
-### Step 5: Search
-
-```bash
+md index --path ~/docs
 md search "query"
 ```
 
-## CLI
+## Commands
 
 ```
-md status                Check if Meilisearch is running
-md search <query>        Search indexed content
-md search index          Build/rebuild index (always full reindex)
-md search status         Check index status
-md smart-index           LLM-powered enhancement (summaries, atoms, relationships)
-md smart-index status    Check LLM and Meilisearch connectivity
-md mcp [sources...]      Start MCP server
+md status              Check if Meilisearch is running
+md search <query>      Search indexed content
+md index               Build/rebuild index
+md summarize           Generate AI summaries and embeddings
+md mcp [sources...]    Start MCP server
 ```
 
-### Options
-
-```
---help, -h            Show help
---version, -v         Show version
---verbose             Verbose output
---json                JSON output
---xml                 XML output
---path <dir>          Target directory (default: cwd)
---limit <n>           Max results (default: 10)
---labels <a,b>        Filter by labels (OR logic)
---author <email>      Filter by author
---created-after       Date filter (YYYY-MM-DD)
---created-before      Date filter (YYYY-MM-DD)
---created-within      Duration filter (30d, 2w, 3m, 1y)
---updated-after       Date filter
---updated-before      Date filter
---updated-within      Duration filter
---stale <dur>         NOT updated within duration
---sort <field>        created_at, -created_at, updated_at, -updated_at
-
-# MCP options
--s, --source <path>   Add source directory (can use name:path format)
--d, --desc <text>     Description for preceding source
-```
-
-### Examples
-
-```bash
-md search "auth"
-md search "" --labels api,docs --limit 20
-md search "" --stale 90d
-md search "api" --json
-```
-
-## Ignoring Files (.mdignore)
-
-Create a `.mdignore` file in your directory root to exclude files and directories from indexing. Uses gitignore-style syntax.
-
-### Syntax
-
-```
-# Comments start with #
-*.draft.md              # Ignore by pattern
-temp/                   # Ignore directory (everything in temp/)
-archive/old.md          # Ignore specific file
-!important.draft.md     # Negate (include exception)
-```
-
-### Example .mdignore
-
-```
-# Ignore drafts and work-in-progress
-*.draft.md
-*.wip.md
-
-# Ignore temporary files
-temp/
-scratch/
-
-# Ignore archived content
-archive/
-
-# But include important exceptions
-!archive/important.md
-```
-
-### Notes
-
-- Patterns are evaluated in order (later patterns can override earlier ones)
-- Directory patterns must end with `/` (e.g., `temp/` not `temp`)
-- `.mdignore` itself is never indexed
-- When you add new patterns, run `md search index` again to remove newly-ignored files
-
-## Smart Indexing (LLM-Powered)
-
-Enhance your markdown index with AI-generated summaries, semantic atoms, and document relationships.
-
-### Prerequisites
-
-1. **Basic index exists**: Run `md search index --path ~/docs` first
-2. **LLM available**: Ollama (default), Claude, or OpenAI configured
-
-Check readiness:
-```bash
-md smart-index status
-```
-
-### Quick Start
-
-Process all documents automatically:
-```bash
-md smart-index --path ~/docs --verbose
-```
-
-This runs three passes on each document:
-- **Pass 1**: Generate concise summary
-- **Pass 2**: Extract semantic facts (atoms)
-- **Pass 3**: Discover relationships to other docs
-
-### Options
-
-```bash
---batch-size <n>      Process N documents then stop (useful for large corpora)
---time-limit <min>    Stop after N minutes
---reset               Reset and reprocess everything from scratch
---dry-run             Preview what would be processed
---verbose             Show detailed progress (recommended)
-```
-
-### Incremental Processing
-
-For large document sets, work in batches:
-```bash
-# Process 20 documents at a time
-md smart-index --path ~/docs --batch-size 20 --verbose
-
-# Run again to process next batch
-md smart-index --path ~/docs --batch-size 20 --verbose
-```
-
-Or use time limits for background processing:
-```bash
-md smart-index --path ~/docs --time-limit 10 --verbose  # 10 minutes
-```
-
-### Automatic Detection
-
-Smart indexing automatically:
-- Detects modified documents (compares `updated_at` vs `smart_indexed_at`)
-- Reprocesses them from Pass 1
-- Processes incomplete documents depth-first (each doc through all passes before moving to next)
-- Runs refinement pass when all docs complete (improves relationships as corpus grows)
-
-### Configuration
-
-Set via environment variables:
-
-```bash
-# Ollama (default)
-export MD_LLM_ENDPOINT="http://localhost:11434/v1"
-export MD_LLM_MODEL="qwen2.5:7b"
-
-# Claude
-export MD_LLM_ENDPOINT="https://api.anthropic.com/v1"
-export MD_LLM_MODEL="claude-3-5-sonnet-20241022"
-export MD_LLM_API_KEY="your-key"
-
-# OpenAI
-export MD_LLM_ENDPOINT="https://api.openai.com/v1"
-export MD_LLM_MODEL="gpt-4"
-export MD_LLM_API_KEY="your-key"
-```
-
-### Workflow
-
-```bash
-# Initial setup
-md search index --path ~/docs
-md smart-index --path ~/docs --verbose
-
-# After adding/modifying docs
-md search index --path ~/docs              # reindex
-md smart-index --path ~/docs --verbose     # auto-detects changes
-
-# Periodic refinement (improves relationships)
-md smart-index --path ~/docs --verbose
-```
-
-## Frontmatter
-
-```yaml
----
-title: Page Title
-page_id: custom-id
-labels: [api, docs]
-author_email: user@example.com
-child_count: 5
----
-```
-
-**Field descriptions:**
-- `child_count`: Number of direct child pages (useful for identifying hub pages vs leaf pages)
-
-**Derivation rules:**
-- Title: `frontmatter.title` > first `# heading` > filename
-- ID: `frontmatter.page_id` > sanitized path (e.g., `docs-api-auth`)
+Run `md <command> --help` for command-specific options.
 
 ## MCP Server
 
 ```bash
-md mcp ~/docs
-```
-
-### Source Formats
-
-```bash
 # Single directory
 md mcp ~/docs
 
-# Multiple directories (names auto-derived, collisions auto-resolved)
-md mcp ~/docs ~/wiki ~/notes
-
-# With descriptions using -s/-d flags (recommended)
+# Multiple directories with descriptions
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
-# Explicit names to avoid collisions
-md mcp -s work:~/work/docs -d "Work documentation" -s personal:~/docs -d "Personal notes"
-```
-
-> **Note:** `~` is expanded to your home directory. Descriptions help Claude know *when* to search each source.
-
-**Name collisions:** Derived names (from directory basename) auto-resolve by adding parent path segments. Explicit names (e.g., `wiki:~/path`) error on collision.
-
-### Tools
-
-**search** - Query with filters, returns snippets (200 chars)
-
-**read_page** - Read full content by `path` or `id`
-
-### Claude Code CLI
-
-```bash
-# Single directory
+# Add to Claude Code
 claude mcp add kb -- md mcp ~/docs
-
-# Multiple directories
-claude mcp add kb -- md mcp ~/docs ~/wiki ~/notes
-
-# With descriptions (recommended)
-claude mcp add kb -- md mcp \
-  -s ~/notes -d "Personal journal" \
-  -s ~/wiki -d "Team knowledge base" \
-  -s ~/docs/eng -d "Engineering docs and RFCs"
 ```
 
-**Scope options:**
-- `--scope local` (default) - just this project
-- `--scope user` - all your projects
-- `--scope project` - shared via `.mcp.json`
+## Documentation
 
-**Management:**
+See [docs/](docs/) for comprehensive documentation:
 
-```bash
-claude mcp list          # view all
-claude mcp get kb        # get details
-claude mcp remove kb     # remove
-```
+- **[Getting Started](docs/README.md)** - Full setup guide
+- **[PRD](docs/prd/)** - Product requirements and specifications
+- **[ADR](docs/adr/)** - Architecture decision records
 
-### Claude Desktop
+## See Also
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "kb": {
-      "command": "md",
-      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal", "-s", "~/wiki", "-d", "Team docs"]
-    }
-  }
-}
-```
-
-## Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MEILISEARCH_HOST` | `http://localhost:7700` | Server URL |
-| `MEILISEARCH_API_KEY` | - | API key if auth enabled |
-
-Index naming: `~/docs/wiki` becomes `md-docs-wiki`
-
-Excluded: `node_modules/`, `.*`, `AGENTS.md`, `CLAUDE.md`
-
-## Development
-
-```bash
-git clone https://github.com/aaronshaf/md
-cd md
-bun install
-
-bun test              # Run tests
-bun run typecheck     # Type check
-bun run lint          # Lint
-bun run lint:fix      # Lint and fix
-```
+- [qmd](https://github.com/tobi/qmd) - Similar tool with opposite tradeoffs: qmd does LLM work at query time (reranking, query expansion), while md does LLM work at index time (summaries, embeddings) for fast queries.

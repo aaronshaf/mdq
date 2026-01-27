@@ -3,7 +3,16 @@ import { createMcpServer } from '../../lib/mcp/index.js';
 import type { Source } from '../../lib/mcp/sources.js';
 import { createSearchClient, indexDirectory } from '../../lib/search/index.js';
 
-export async function runMcpCommand(sources: Source[]): Promise<void> {
+export async function runMcpCommand(
+	sources: Source[],
+	httpOptions?: {
+		enabled: boolean;
+		port: number;
+		host: string;
+		apiKey: string;
+		noAuth: boolean;
+	},
+): Promise<void> {
 	const client = createSearchClient();
 
 	// Check Meilisearch health before proceeding
@@ -13,6 +22,31 @@ export async function runMcpCommand(sources: Source[]): Promise<void> {
 		process.exit(EXIT_CODES.CONNECTION_ERROR);
 	}
 	console.error(`[md] ${health.message}`);
+
+	// If HTTP mode enabled, validate API key and route to HTTP server
+	if (httpOptions?.enabled) {
+		if (!httpOptions.noAuth) {
+			if (!httpOptions.apiKey) {
+				console.error('Error: API key required for HTTP mode. Set MD_MCP_API_KEY or use --api-key');
+				console.error('Use --no-auth to disable authentication (for testing only)');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+
+			// Validate API key strength (minimum 16 characters for security)
+			if (httpOptions.apiKey.length < 16) {
+				console.error('Error: API key must be at least 16 characters long for security.');
+				console.error('Generate a strong key with: openssl rand -hex 32');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+		}
+
+		// Import and call HTTP server runner
+		const { runHttpMcpServer } = await import('./mcp-http.js');
+		await runHttpMcpServer(sources, client, httpOptions);
+		return;
+	}
+
+	// Otherwise, use stdio mode (default behavior)
 
 	// Auto-index all source directories in parallel
 	console.error(`[md] Indexing ${sources.length} source(s)...`);

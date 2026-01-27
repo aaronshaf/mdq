@@ -16,3 +16,5 @@ Records of significant architectural decisions with context and rationale. Each 
 | [0008](0008-bunfig-toml-configuration.md) | Bun runtime and test config |
 | [0009](0009-dual-async-effect-api.md) | Both async and Effect methods |
 | [0010](0010-use-meilisearch-for-local-search.md) | Meilisearch for local search |
+| [0011](0011-smart-indexing-llm-embeddings.md) | Smart indexing with LLM summaries and embeddings |
+| [0012](0012-mcp-http-transport.md) | MCP HTTP transport for remote access |

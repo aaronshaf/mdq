@@ -24,14 +24,6 @@ export class HumanFormatter implements Formatter {
 			lines.push(chalk.cyan(`Labels: ${obj.labels.join(', ')}`));
 		}
 
-		if (obj.atoms && Array.isArray(obj.atoms) && obj.atoms.length > 0) {
-			lines.push(''); // blank line before atoms
-			lines.push(chalk.cyan('Key Facts:'));
-			for (const atom of obj.atoms) {
-				lines.push(chalk.dim(`  • ${atom}`));
-			}
-		}
-
 		return lines.join('\n');
 	}
 

@@ -19,11 +19,11 @@ Users need fast, typo-tolerant, offline search across their markdown content wit
 | Offline capable | Search works without network | 100% offline |
 | Filterable | Filter by labels, author, date | Supported (when metadata present) |
 | Source agnostic | Work with markdown from any source | cn, git, manual, etc. |
+| Semantic search | Find by meaning, not just keywords | Optional (via `md summarize`) |
 
 ## Non-Goals
 
 - Real-time file watching (manual reindex)
-- Semantic/AI search (full-text only for v1)
 - Search result pagination in v1 (top N results)
 - Writing or modifying files
 
@@ -33,7 +33,7 @@ Integrate [Meilisearch](https://www.meilisearch.com/) as a local search engine. 
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Local Markdown │────▶│  md search index │────▶│   Meilisearch   │
+│  Local Markdown │────▶│    md index      │────▶│   Meilisearch   │
 │     Files       │     │                  │     │  (localhost)    │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
                                                          │
@@ -49,16 +49,16 @@ Integrate [Meilisearch](https://www.meilisearch.com/) as a local search engine. 
 Users must run Meilisearch locally:
 
 ```bash
-# Option 1: Docker (recommended)
+# Docker (recommended)
 docker run -d -p 7700:7700 \
-  -v $(pwd)/meili_data:/meili_data \
+  -v ~/.meilisearch/data:/meili_data \
   getmeili/meilisearch:latest
 
-# Option 2: Homebrew (macOS)
+# Homebrew (macOS)
 brew install meilisearch
 meilisearch --db-path ./meili_data
 
-# Option 3: Direct binary
+# Direct binary
 curl -L https://install.meilisearch.com | sh
 ./meilisearch --db-path ./meili_data
 ```
@@ -89,6 +89,11 @@ interface SearchDocument {
   // Display fields
   local_path: string      // Relative path from index root
   url: string | null      // Source URL if in frontmatter
+
+  // Smart indexing fields (optional - from md summarize)
+  summary: string | null        // AI-generated summary
+  _vectors: object | null       // Embedding vector for semantic search
+  smart_indexed_at: number | null
 }
 ```
 
@@ -111,6 +116,7 @@ Document ID is determined in this order:
 const indexSettings = {
   searchableAttributes: [
     'title',      // Highest priority
+    'summary',    // AI summary (if present)
     'content'     // Lower priority
   ],
   filterableAttributes: [
@@ -139,13 +145,17 @@ const indexSettings = {
 Index name is derived from the full directory path relative to `$HOME`:
 - `~/docs/wiki` → `md-docs-wiki`
 - `~/projects/eng-docs` → `md-projects-eng-docs`
-- `~/github/team/docs` → `md-github-team-docs`
-
-If path is outside `$HOME`, uses full absolute path segments.
 
 Sanitization: lowercase, replace non-alphanumeric with hyphen.
 
-This ensures uniqueness - no two directories can collide.
+## Hybrid Search
+
+When documents have embeddings (via `md summarize`), search automatically uses hybrid mode:
+
+1. **Keyword search**: Traditional full-text with typo tolerance
+2. **Semantic search**: Vector similarity using embeddings
+
+Results are merged and ranked. No flags needed - hybrid search activates automatically when embeddings exist.
 
 ## Configuration
 
@@ -153,7 +163,7 @@ No configuration file. Settings via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MEILISEARCH_URL` | `http://localhost:7700` | Meilisearch server URL |
+| `MEILISEARCH_HOST` | `http://localhost:7700` | Meilisearch server URL |
 | `MEILISEARCH_API_KEY` | (none) | API key if Meilisearch requires auth |
 
 ## File Exclusions
@@ -162,27 +172,40 @@ The following are excluded from indexing by default:
 
 | Pattern | Reason |
 |---------|--------|
-| `.*` | All dot files and folders (`.git/`, `.next/`, `.env`, etc.) |
+| `.*` | All dot files and folders |
 | `node_modules/` | Package dependencies |
 | `AGENTS.md` | AI agent instructions |
 | `CLAUDE.md` | AI agent instructions |
+| `.mdignore` patterns | User-defined exclusions |
 
-No `--exclude` flag for v1. These defaults handle the common cases.
+### .mdignore
+
+Users can create a `.mdignore` file with gitignore-style patterns:
+
+```
+# Ignore drafts
+*.draft.md
+
+# Ignore directories
+temp/
+archive/
+
+# Exceptions
+!archive/important.md
+```
 
 ## Indexing Behavior
 
-`md search index` always performs a **full reindex**:
+`md index` always performs a **full reindex**:
 
 1. Delete existing index for the directory
 2. Scan all markdown files (respecting exclusions)
 3. Create fresh index with all documents
 
 This approach:
-- Automatically handles deleted files (they're simply not re-added)
+- Automatically handles deleted files
 - Keeps implementation simple
 - Is fast enough for typical use (1000 files in ~1-2 seconds)
-
-No `--force` flag needed since every index operation is a full rebuild.
 
 ## Empty Query Support
 
@@ -203,8 +226,8 @@ md search "" --limit 5 --sort -updated_at
 
 | Error | Exit Code | Message |
 |-------|-----------|---------|
-| Meilisearch not running | 9 | `Meilisearch not available at {url}. Start it with: docker run -d -p 7700:7700 getmeili/meilisearch:latest` |
-| Index not found | 10 | `No search index found. Run 'md search index' first.` |
+| Meilisearch not running | 9 | `Meilisearch not available at {url}` |
+| Index not found | 10 | `No search index found. Run 'md index' first.` |
 | No results | 0 | `No results found for "{query}"` |
 | Invalid filter | 6 | `Invalid filter: {details}` |
 
@@ -218,12 +241,14 @@ src/
 │   └── search/
 │       ├── index.ts           # Search facade
 │       ├── indexer.ts         # Build index from files
+│       ├── smart-indexer.ts   # AI summaries and embeddings
 │       ├── client.ts          # Meilisearch client wrapper
 │       ├── date-utils.ts      # Date filter helpers
 │       └── types.ts           # Search types
 └── cli/
     └── commands/
-        └── search.ts          # md search command
+        ├── search.ts          # md search command
+        └── smart-index.ts     # md summarize command
 ```
 
 ### Dependencies
@@ -250,10 +275,11 @@ src/
 - Real Meilisearch instance (Docker in CI)
 - Index creation and search queries
 - Filter combinations
-- Missing metadata handling
+- Hybrid search with embeddings
 
 ## References
 
 - [Meilisearch Documentation](https://www.meilisearch.com/docs)
 - [Meilisearch JavaScript SDK](https://github.com/meilisearch/meilisearch-js)
+- [Meilisearch Hybrid Search](https://www.meilisearch.com/docs/learn/experimental/vector_search)
 - [gray-matter](https://github.com/jonschlinkert/gray-matter) - Frontmatter parsing

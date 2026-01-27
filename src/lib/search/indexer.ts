@@ -165,6 +165,10 @@ async function parseFileToDocument(
 			}
 		}
 
+		// Extract reference field if present (for Chicago-style citations)
+		const reference =
+			typeof parsed.frontmatter.reference === 'string' ? parsed.frontmatter.reference : undefined;
+
 		return {
 			document: {
 				id: parsed.id,
@@ -176,6 +180,7 @@ async function parseFileToDocument(
 				created_at: createdAt,
 				updated_at: updatedAt,
 				child_count: parsed.frontmatter.child_count,
+				reference,
 			},
 		};
 	} catch (error) {

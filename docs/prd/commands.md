@@ -6,10 +6,32 @@
 |--------|-------------|
 | `--help, -h` | Show help |
 | `--version, -v` | Show version |
-| `--verbose` | Enable debug output |
+| `--verbose` | Enable verbose output |
+| `--json` | Output as JSON |
+| `--xml` | Output as XML |
 | `--path <dir>` | Target directory (default: current directory) |
 
 ## Commands
+
+### md status
+
+Check if Meilisearch is running.
+
+```
+md status [options]
+```
+
+**Output (connected):**
+
+```
+Meilisearch: healthy (http://localhost:7700)
+```
+
+**Output (not connected):**
+
+```
+Meilisearch: not available
+```
 
 ### md search
 
@@ -17,13 +39,14 @@ Search indexed markdown content.
 
 ```
 md search <query> [options]
+md search status    Check index status
 ```
 
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--labels <label>` | Filter by label (repeatable) |
+| `--labels <label>` | Filter by labels (comma-separated, OR logic) |
 | `--author <email>` | Filter by author email |
 | `--created-after <date>` | Documents created after date (YYYY-MM-DD) |
 | `--created-before <date>` | Documents created before date (YYYY-MM-DD) |
@@ -34,8 +57,6 @@ md search <query> [options]
 | `--stale <duration>` | Not updated within duration (e.g., 90d, 6m) |
 | `--sort <field>` | Sort by created_at or updated_at (prefix with - for desc) |
 | `--limit <n>` | Max results (default: 10) |
-| `--json` | Output as JSON |
-| `--xml` | Output as XML |
 
 **Examples:**
 
@@ -49,13 +70,10 @@ md search "authentcation"
 # Filter by label
 md search "api" --labels documentation
 
-# Multiple filters
-md search "config" --labels api --labels internal
-
 # Date filtering
 md search "api" --updated-within 30d
 
-# Find stale content (empty query returns all docs, filters apply)
+# Find stale content
 md search "" --stale 90d --labels documentation
 
 # Browse all docs with a label
@@ -83,38 +101,14 @@ Found 3 results for "authentication"
 2. API Security
    api-reference/security.md
    ...token-based authentication using JWT...
-
-3. SSO Configuration
-   admin/sso-config.md
-   ...SAML authentication setup for enterprise...
 ```
 
-**Output (XML):**
+### md index
 
-```xml
-<result>
-  <item>
-    <id>getting-started-authentication</id>
-    <title>Authentication Guide</title>
-    <path>getting-started/authentication.md</path>
-    <snippet>...handles OAuth2 authentication flows for the API...</snippet>
-    <labels>
-      <item>documentation</item>
-      <item>security</item>
-    </labels>
-    <author_email>user@example.com</author_email>
-    <created_at>1769018471085</created_at>
-    <updated_at>1769018471085</updated_at>
-  </item>
-</result>
-```
-
-### md search index
-
-Build the search index. Always performs a full reindex (deletes existing index, recreates from current files).
+Build the search index. Always performs a full reindex.
 
 ```
-md search index [options]
+md index [options]
 ```
 
 **Options:**
@@ -122,64 +116,77 @@ md search index [options]
 | Option | Description |
 |--------|-------------|
 | `--path <dir>` | Directory to index (default: current directory) |
+| `--verbose` | Show detailed progress |
 
 **Examples:**
 
 ```bash
-# Build index for current directory
-md search index
-
-# Index specific directory
-md search index --path ~/docs/wiki
+md index
+md index --path ~/docs/wiki
+md index --path ~/docs --verbose
 ```
 
 **Output:**
 
 ```
 Indexing markdown files...
-  Scanning for .md files...
   Found 142 files
+  Connecting to Meilisearch...
 
-  Connecting to Meilisearch (http://localhost:7700)...
-  Indexing documents...
-
-✓ Indexed 142 documents in 1.2s
+Indexed 142 documents in 1.2s
 ```
 
-**Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, and `CLAUDE.md` are automatically excluded.
+**Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdignore` are automatically excluded.
 
-### md search status
+### md summarize
 
-Check Meilisearch connection and index status.
+Generate AI summaries and vector embeddings for semantic search.
 
 ```
-md search status [options]
+md summarize [options]
+md summarize status    Check LLM and Meilisearch connectivity
 ```
 
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--path <dir>` | Directory to check (default: current directory) |
-| `--xml` | Output as XML |
+| `--path <dir>` | Directory to process (default: current directory) |
+| `--batch-size <n>` | Max documents to process per run |
+| `--time-limit <min>` | Max time to run in minutes |
+| `--reset` | Reset and reprocess all documents |
+| `--dry-run` | Preview what would be processed |
+| `--verbose` | Show detailed progress |
 
-**Output (connected):**
+**Examples:**
+
+```bash
+# Process all documents
+md summarize --path ~/docs --verbose
+
+# Process in batches
+md summarize --path ~/docs --batch-size 50 --verbose
+
+# Time-limited processing
+md summarize --path ~/docs --time-limit 10 --verbose
+
+# Reset and reprocess
+md summarize --path ~/docs --reset --verbose
+
+# Check status
+md summarize status
+```
+
+**Output (verbose):**
 
 ```
-Search Status
-  Meilisearch: ✓ Connected (http://localhost:7700)
-  Index: md-wiki (142 documents)
-  Directory: /Users/me/docs/wiki
-```
+Processing documents...
+  [1/142] Authentication Guide - generating summary...
+  [1/142] Authentication Guide - generating embedding...
+  [2/142] API Security - generating summary...
+  ...
 
-**Output (not connected):**
-
-```
-Search Status
-  Meilisearch: ✗ Not connected
-
-  To start Meilisearch:
-    docker run -d -p 7700:7700 getmeili/meilisearch:latest
+Processed 142 documents
 ```
 
 ### md mcp
@@ -187,31 +194,60 @@ Search Status
 Launch an MCP server for AI assistant integration.
 
 ```
-md mcp [path] [options]
+md mcp [sources...] [options]
 ```
 
-**Arguments:**
+**Source Formats:**
 
-| Argument | Description |
-|----------|-------------|
-| `[path]` | Path to markdown directory (default: current directory) |
+| Format | Description |
+|--------|-------------|
+| `~/docs` | Single directory |
+| `~/docs ~/wiki` | Multiple directories |
+| `-s <path> -d <desc>` | Directory with description |
+| `name:~/path` | Named directory |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-s, --source <path>` | Add source directory |
+| `-d, --desc <text>` | Description for preceding source |
+
+**HTTP Mode Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--http` | Enable HTTP transport |
+| `--port <number>` | Port to bind (default: 3000) |
+| `--host <string>` | Host to bind (default: 127.0.0.1) |
+| `--api-key <string>` | API key (or set MD_MCP_API_KEY) |
+| `--no-auth` | Disable authentication (testing only) |
 
 **Examples:**
 
 ```bash
-# Start MCP server for current directory
-md mcp
+# Single directory
+md mcp ~/docs
 
-# Start MCP server for specific directory
-md mcp ~/docs/wiki
+# Multiple directories
+md mcp ~/docs ~/wiki ~/notes
+
+# With descriptions
+md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+
+# HTTP mode
+export MD_MCP_API_KEY="$(openssl rand -hex 32)"
+md mcp --http ~/docs
+md mcp --http --port 8080 --host 0.0.0.0 ~/docs
 ```
 
 **Startup (stderr):**
 
 ```
-md mcp: serving directory /Users/me/docs/wiki
-md mcp: Meilisearch connected at http://localhost:7700
-md mcp: index "md-wiki" ready (142 documents)
+md mcp: serving 2 sources
+  - notes: /Users/me/notes (Personal journal)
+  - wiki: /Users/me/wiki (Team docs)
+md mcp: Meilisearch connected
 md mcp: MCP server running on stdio
 ```
 

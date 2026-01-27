@@ -33,11 +33,6 @@ export const SearchToolParams = z.object({
 		.enum(['created_at', '-created_at', 'updated_at', '-updated_at'])
 		.optional()
 		.describe('Sort order (prefix with - for descending)'),
-	include_related: z
-		.boolean()
-		.optional()
-		.default(false)
-		.describe('Also fetch related documents (requires smart indexing)'),
 });
 
 // Base schema for read tool (used for MCP tool registration)

@@ -7,7 +7,7 @@ Complete guide for indexing and searching local markdown files.
 - [Installation](#installation)
 - [Search](#search)
 - [Ignoring Files](#ignoring-files)
-- [Summarization](#summarization)
+- [Embeddings](#embeddings-semantic-search)
 - [MCP Server](#mcp-server)
 - [Configuration](#configuration)
 - [Frontmatter](#frontmatter)
@@ -128,16 +128,14 @@ archive/
 - Directory patterns must end with `/`
 - Run `md index` after adding patterns to remove newly-ignored files
 
-## Summarization
+## Embeddings (Semantic Search)
 
-Enhance your index with AI-generated summaries and vector embeddings for semantic search.
+Enhance your index with vector embeddings for semantic search. Documents are chunked and each chunk is embedded, enabling search by meaning rather than just keywords.
 
 ### Prerequisites
 
 1. Basic index exists: `md index --path ~/docs`
-2. Ollama running with models:
-   - LLM for summaries (default: `qwen2.5:7b`)
-   - Embedding model (default: `nomic-embed-text:latest`)
+2. Ollama running with embedding model (default: `nomic-embed-text:latest`)
 
 ```bash
 ollama pull nomic-embed-text
@@ -150,11 +148,7 @@ md embed status    # Check readiness
 md embed --path ~/docs --verbose
 ```
 
-This runs two passes per document:
-1. Generate concise summary (LLM)
-2. Generate vector embedding from title + summary
-
-Once embeddings exist, `md search` automatically uses hybrid search (keyword + semantic).
+This chunks each document and generates vector embeddings for semantic search. Once embeddings exist, `md search` automatically uses hybrid search (keyword + semantic).
 
 ### Options
 
@@ -179,19 +173,10 @@ md embed --path ~/docs --time-limit 10 --verbose
 ### Configuration
 
 ```bash
-# LLM for summaries
-export MD_LLM_ENDPOINT="http://localhost:11434/v1"
-export MD_LLM_MODEL="qwen2.5:7b"
-
-# Embedding model
+# Embedding model (Ollama - default)
 export MD_EMBEDDING_ENDPOINT="http://localhost:11434"
 export MD_EMBEDDING_MODEL="nomic-embed-text:latest"
 export MD_EMBEDDING_DIMENSIONS="768"
-
-# For Claude/OpenAI
-export MD_LLM_ENDPOINT="https://api.anthropic.com/v1"
-export MD_LLM_MODEL="claude-3-5-sonnet-20241022"
-export MD_LLM_API_KEY="your-key"
 ```
 
 ### Embedding Models
@@ -358,13 +343,10 @@ ngrok http 3000
 | `MD_MCP_PORT` | `3000` | HTTP mode port |
 | `MD_MCP_HOST` | `127.0.0.1` | HTTP mode host |
 | `MD_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
-| `MD_LLM_ENDPOINT` | `http://localhost:11434/v1` | LLM API endpoint |
-| `MD_LLM_MODEL` | `qwen2.5:7b` | LLM model name |
-| `MD_LLM_API_KEY` | - | LLM API key |
 | `MD_EMBEDDING_ENDPOINT` | `http://localhost:11434` | Embedding endpoint |
 | `MD_EMBEDDING_MODEL` | `nomic-embed-text:latest` | Embedding model |
 | `MD_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
-| `MD_EMBEDDING_API_KEY` | - | Embedding API key |
+| `MD_EMBEDDING_API_KEY` | - | Embedding API key (for cloud providers) |
 
 **Index naming:** `~/docs/wiki` becomes `md-docs-wiki`
 

@@ -90,10 +90,9 @@ interface SearchDocument {
   local_path: string      // Relative path from index root
   url: string | null      // Source URL if in frontmatter
 
-  // Smart indexing fields (optional - from md embed)
-  summary: string | null        // AI-generated summary
-  _vectors: object | null       // Embedding vector for semantic search
-  smart_indexed_at: number | null
+  // Embedding fields (optional - from md embed)
+  embedded_at: number | null    // Timestamp when embeddings were generated
+  // Note: Embeddings stored in separate chunks index
 }
 ```
 
@@ -116,7 +115,6 @@ Document ID is determined in this order:
 const indexSettings = {
   searchableAttributes: [
     'title',      // Highest priority
-    'summary',    // AI summary (if present)
     'content'     // Lower priority
   ],
   filterableAttributes: [
@@ -241,7 +239,7 @@ src/
 │   └── search/
 │       ├── index.ts           # Search facade
 │       ├── indexer.ts         # Build index from files
-│       ├── smart-indexer.ts   # AI summaries and embeddings
+│       ├── smart-indexer.ts   # Embeddings for semantic search
 │       ├── client.ts          # Meilisearch client wrapper
 │       ├── date-utils.ts      # Date filter helpers
 │       └── types.ts           # Search types

@@ -2,7 +2,7 @@
 
 ## Overview
 
-`md` is a CLI tool for indexing and searching local markdown files. It provides fast, typo-tolerant search across markdown content via Meilisearch, with optional AI-powered summaries and vector embeddings for semantic search, plus MCP server integration for AI assistants.
+`md` is a CLI tool for indexing and searching local markdown files. It provides fast, typo-tolerant search across markdown content via Meilisearch, with optional vector embeddings for semantic search, plus MCP server integration for AI assistants.
 
 ## Goals
 
@@ -31,7 +31,7 @@
 | Config | Environment variables | No config file needed, simple setup |
 | MCP transport | stdio + HTTP | Local and remote access |
 | Output formats | Text, JSON, XML | Human, scripting, and LLM consumption |
-| AI summaries | Ollama (default) | Local-first, optional cloud providers |
+| Embeddings | Ollama (default) | Local-first, optional cloud providers |
 
 ## Commands
 
@@ -41,7 +41,7 @@
 | `md search <query>` | Search indexed content |
 | `md search status` | Check index status |
 | `md index` | Build/rebuild the search index |
-| `md embed` | Generate AI summaries and embeddings |
+| `md embed` | Generate embeddings for semantic search |
 | `md embed status` | Check LLM and embedding connectivity |
 | `md mcp [sources...]` | Start MCP server for AI assistants |
 
@@ -100,7 +100,7 @@ Found 3 results for "authentication"
 ```
 $ md embed --path ~/docs/wiki --verbose
 Processing 142 documents...
-  [1/142] Authentication Guide - generating summary...
+  [1/142] Authentication Guide - chunking and embedding...
   [1/142] Authentication Guide - generating embedding...
   ...
 

@@ -32,7 +32,7 @@ md search "query"
 md status              Check if Meilisearch is running
 md search <query>      Search indexed content
 md index               Build/rebuild index
-md embed           Generate AI summaries and embeddings
+md embed               Generate embeddings for semantic search
 md mcp [sources...]    Start MCP server
 ```
 
@@ -61,4 +61,4 @@ See [docs/](docs/) for comprehensive documentation:
 
 ## See Also
 
-- [qmd](https://github.com/tobi/qmd) - Similar tool with opposite tradeoffs: qmd does LLM work at query time (reranking, query expansion), while md does LLM work at index time (summaries, embeddings) for fast queries.
+- [qmd](https://github.com/tobi/qmd) - Similar tool with opposite tradeoffs: qmd does LLM work at query time (reranking, query expansion), while md does LLM work at index time (embeddings) for fast queries.

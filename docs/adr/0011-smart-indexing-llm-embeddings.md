@@ -1,8 +1,8 @@
-# ADR 0011: Smart Indexing with LLM Summaries and Embeddings
+# ADR 0011: Chunked Embeddings for Semantic Search
 
 ## Status
 
-Accepted
+Accepted (Updated)
 
 ## Context
 
@@ -14,29 +14,36 @@ Keyword search has limitations:
 
 Users want semantic search that understands document meaning, not just keyword matching.
 
-Options evaluated:
+### Previous Approach (Superseded)
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Ollama (local LLM)** | Free, private, offline | Slower, requires local GPU/CPU |
-| **OpenAI API** | Fast, high quality | Cost per document, requires internet |
-| **Anthropic API** | Fast, high quality | Cost per document, requires internet |
-| **Hybrid approach** | Flexibility | More configuration |
+Initially planned to generate AI summaries for each document, then embed the summaries. This was abandoned because:
+
+1. Summary generation was slow (LLM call per document)
+2. Summaries lost important details from the original content
+3. Required both LLM model and embedding model
+
+### Current Approach
+
+Chunk documents and embed each chunk directly. This provides:
+
+1. **Better coverage** - All content is embedded, not just a summary
+2. **Faster processing** - Only embedding model needed, no LLM generation
+3. **Finer granularity** - Search can match specific sections within documents
 
 ## Decision
 
-Implement **smart indexing** via `md embed` command that:
+Implement **chunked embeddings** via `md embed` command that:
 
-1. **Generates summaries** using a configurable LLM (default: Ollama with qwen2.5:7b)
-2. **Generates embeddings** using a configurable embedding model (default: Ollama with nomic-embed-text)
-3. **Stores in Meilisearch** alongside existing document content
+1. **Chunks documents** into smaller pieces (respecting paragraph/sentence boundaries)
+2. **Generates embeddings** for each chunk using configurable embedding model (default: Ollama with nomic-embed-text)
+3. **Stores chunks in separate index** (`{indexName}-chunks`) with vector embeddings
 4. **Enables hybrid search** automatically when embeddings exist
 
 ```bash
 # Index documents
 md index --path ~/docs
 
-# Add summaries and embeddings
+# Generate embeddings
 md embed --path ~/docs --verbose
 
 # Search uses hybrid mode automatically
@@ -45,90 +52,102 @@ md search "authentication concepts"
 
 ## Rationale
 
-### Why separate command (not part of `md index`)
+### Why chunking (not whole document embeddings)
 
-1. **Optional enhancement** - Not all users need or want AI features
-2. **Long-running operation** - LLM calls take seconds per document
-3. **Different requirements** - Needs Ollama/API keys, separate from Meilisearch
-4. **Incremental processing** - Can process in batches over time
+1. **Long document problem** - Embedding models have token limits; long docs get truncated
+2. **Better precision** - Chunks allow matching specific sections, not just whole docs
+3. **Deduplication** - Similar content in different docs shares embedding space efficiently
+
+### Why separate chunks index
+
+1. **Clean separation** - Documents and chunks have different schemas
+2. **Independent updates** - Can regenerate embeddings without touching source index
+3. **Query flexibility** - Can search chunks or documents independently
 
 ### Why Ollama as default
 
 1. **Local-first** - No API costs, works offline
 2. **Privacy** - Documents stay on user's machine
 3. **Free** - No per-document charges
-4. **Good quality** - Modern small models produce useful summaries
+4. **Quality** - nomic-embed-text provides good semantic matching
 
 ### Why configurable providers
 
-1. **Flexibility** - Users can use Claude, GPT-4, etc. for higher quality
-2. **Speed** - Cloud APIs faster than local models
-3. **Enterprise** - Organizations may prefer their existing AI infrastructure
-
-### Why summaries + embeddings (not just embeddings)
-
-1. **Search display** - Summaries provide useful preview in results
-2. **Better embeddings** - Embed summary (meaning) rather than raw content (noise)
-3. **Debugging** - Human-readable summaries help verify quality
+1. **Flexibility** - Users can use OpenAI, etc. for different quality/speed tradeoffs
+2. **Enterprise** - Organizations may prefer their existing embedding infrastructure
 
 ## Consequences
 
 ### Positive
 
 - Semantic search finds documents by meaning
-- Summaries improve search result previews
-- Works with any LLM provider (local or cloud)
+- All content is searchable (not just summaries)
+- Faster than LLM-based summary generation
+- Works with any embedding provider (local or cloud)
 - Hybrid search combines keyword + semantic ranking
 
 ### Negative
 
 - Requires additional setup (Ollama or API keys)
 - Processing time for large document sets
-- Storage overhead for embeddings
+- Storage overhead for chunk embeddings
 
 ### Mitigations
 
-- `md embed status` verifies LLM/embedding connectivity
+- `md embed status` verifies embedding service connectivity
 - Batch processing with `--batch-size` and `--time-limit`
 - Incremental updates (only processes changed documents)
 - `--reset` flag to reprocess everything if needed
 
 ## Implementation Notes
 
-### Document fields
+### Chunk schema
 
 ```typescript
-interface SmartDocument extends SearchDocument {
-  summary: string | null           // AI-generated summary
-  _vectors: {                      // Meilisearch vector format
-    default: number[]              // Embedding vector
-  } | null
-  smart_indexed_at: number | null  // Timestamp of last processing
+interface ChunkDocument {
+  id: string              // "{docId}-chunk-{index}"
+  doc_id: string          // Parent document ID
+  chunk_index: number     // Position in document
+  content: string         // Chunk text
+  _vectors: {
+    default: number[]     // Embedding vector
+  }
+}
+```
+
+### Document tracking
+
+```typescript
+interface SearchDocument {
+  // ... existing fields ...
+  embedded_at: number | null  // Timestamp when embeddings were generated
 }
 ```
 
 ### Configuration
 
 ```bash
-# LLM for summaries
-export MD_LLM_ENDPOINT="http://localhost:11434/v1"
-export MD_LLM_MODEL="qwen2.5:7b"
-export MD_LLM_API_KEY=""  # Only for cloud providers
-
-# Embedding model
+# Embedding model (Ollama - default)
 export MD_EMBEDDING_ENDPOINT="http://localhost:11434"
 export MD_EMBEDDING_MODEL="nomic-embed-text:latest"
 export MD_EMBEDDING_DIMENSIONS="768"
+
+# OpenAI
+export MD_EMBEDDING_ENDPOINT="https://api.openai.com/v1"
+export MD_EMBEDDING_MODEL="text-embedding-3-small"
+export MD_EMBEDDING_DIMENSIONS="1536"
+export MD_EMBEDDING_API_KEY="sk-..."
 ```
 
 ### Processing flow
 
-1. Find documents needing work (no summary or `updated_at > smart_indexed_at`)
+1. Find documents needing embedding (`embedded_at` is null or `updated_at > embedded_at`)
 2. For each document:
-   - Generate summary via LLM
-   - Generate embedding from title + summary
-   - Update document in Meilisearch
-3. Meilisearch automatically uses hybrid search when `_vectors` exists
+   - Chunk content into ~500 token pieces
+   - Generate embeddings for all chunks in batch
+   - Store chunks in `{indexName}-chunks` index
+   - Update document's `embedded_at` timestamp
+3. Meilisearch uses hybrid search when chunks index has vectors
 
 ## References
 

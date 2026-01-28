@@ -46,26 +46,6 @@ export async function runHttpMcpServer(
 		noAuth: boolean;
 	},
 ): Promise<void> {
-	// Index all sources (same as stdio mode)
-	console.error(`[mdq] Indexing ${sources.length} source(s)...`);
-	const indexResults = await Promise.allSettled(
-		sources.map(async (source) => {
-			const result = await indexDirectory(source.path, client);
-			return { source, result };
-		}),
-	);
-
-	for (const outcome of indexResults) {
-		if (outcome.status === 'fulfilled') {
-			const { source, result } = outcome.value;
-			console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
-		} else {
-			const reason =
-				outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-			console.error(`[mdq] Warning: Indexing failed: ${reason}`);
-		}
-	}
-
 	// Create MCP server instance (shared across all sessions)
 	const mcpServer = await createMcpServerInstance(sources, client);
 	const transportManager = createHttpTransportManager();
@@ -191,6 +171,28 @@ export async function runHttpMcpServer(
 		console.error('[mdq] WARNING: Server is binding to non-localhost address.');
 		console.error('[mdq] Ensure your firewall and network are properly configured.');
 	}
+
+	// Auto-index all source directories in background (non-blocking)
+	// Server is already running and usable while indexing happens
+	console.error(`[mdq] Starting background indexing for ${sources.length} source(s)...`);
+	Promise.allSettled(
+		sources.map(async (source) => {
+			const result = await indexDirectory(source.path, client);
+			return { source, result };
+		}),
+	).then((indexResults) => {
+		for (const outcome of indexResults) {
+			if (outcome.status === 'fulfilled') {
+				const { source, result } = outcome.value;
+				console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
+			} else {
+				const reason =
+					outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
+				console.error(`[mdq] Warning: Indexing failed: ${reason}`);
+			}
+		}
+		console.error('[mdq] Background indexing complete');
+	});
 
 	// Graceful shutdown
 	const shutdown = async () => {

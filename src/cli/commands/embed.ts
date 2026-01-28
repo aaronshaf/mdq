@@ -32,12 +32,12 @@ export async function runEmbedCommand(
 		throw new Error(prereq.message);
 	}
 
-	// Always show embedding model being used
+	// Show embedding config when verbose
 	const embeddingConfig = llmClient.getEmbeddingConfig();
 	const logger = createLogger(options.verbose);
-	console.log(''); // Empty line before config
-	logger.config('Embedding model', `${embeddingConfig.model} at ${embeddingConfig.endpoint}`);
 	if (options.verbose) {
+		console.log(''); // Empty line before config
+		logger.config('Embedding model', `${embeddingConfig.model} at ${embeddingConfig.endpoint}`);
 		logger.config('Directory', absolutePath);
 		if (options.batchSize) {
 			logger.config('Batch size', `${options.batchSize} documents`);
@@ -49,8 +49,8 @@ export async function runEmbedCommand(
 		}
 		if (options.reset) logger.config('Reset', 'enabled');
 		if (options.dryRun) logger.config('Dry run', 'enabled');
+		console.log(''); // Empty line after config
 	}
-	console.log(''); // Empty line after config
 
 	const result = await embedder.embed(absolutePath, {
 		batchSize: options.batchSize,

@@ -50,28 +50,30 @@ export async function runMcpCommand(
 
 	// Otherwise, use stdio mode (default behavior)
 
-	// Auto-index all source directories in parallel
-	console.error(`[mdq] Indexing ${sources.length} source(s)...`);
-	const indexResults = await Promise.allSettled(
+	const server = await createMcpServer(sources, client);
+
+	// Auto-index all source directories in background (non-blocking)
+	// Server starts immediately and is usable while indexing runs
+	console.error(`[mdq] Starting background indexing for ${sources.length} source(s)...`);
+	Promise.allSettled(
 		sources.map(async (source) => {
 			const result = await indexDirectory(source.path, client);
 			return { source, result };
 		}),
-	);
-
-	// Report results
-	for (const outcome of indexResults) {
-		if (outcome.status === 'fulfilled') {
-			const { source, result } = outcome.value;
-			console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
-		} else {
-			const reason =
-				outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-			console.error(`[mdq] Warning: Indexing failed: ${reason}`);
+	).then((indexResults) => {
+		// Report results when indexing completes
+		for (const outcome of indexResults) {
+			if (outcome.status === 'fulfilled') {
+				const { source, result } = outcome.value;
+				console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
+			} else {
+				const reason =
+					outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
+				console.error(`[mdq] Warning: Indexing failed: ${reason}`);
+			}
 		}
-	}
-
-	const server = await createMcpServer(sources, client);
+		console.error('[mdq] Background indexing complete');
+	});
 
 	// Graceful shutdown on SIGINT/SIGTERM
 	const shutdown = async () => {

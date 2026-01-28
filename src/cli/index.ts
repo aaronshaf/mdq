@@ -360,15 +360,15 @@ USAGE:
   mdq index [options]
 
 OPTIONS:
-  --path <dir>       Directory to index (default: current directory)
+  --path <dir>       Directory to index (if not specified, indexes all registered sources)
   --verbose          Enable verbose output
   --json             Output in JSON format
   --xml              Output in XML format
 
 EXAMPLES:
-  mdq index
-  mdq index --path ~/docs
-  mdq index --path ~/docs --verbose
+  mdq index                      # Index all registered sources
+  mdq index --path ~/docs        # Index specific directory
+  mdq index --verbose            # Index all sources with verbose output
 `);
 			break;
 
@@ -380,7 +380,7 @@ USAGE:
   mdq embed status    Check embedding service and Meilisearch connectivity
 
 OPTIONS:
-  --path <dir>         Directory to process (default: current directory)
+  --path <dir>         Directory to process (if not specified, embeds all registered sources)
   --batch-size <n>     Max documents to process per run (default: unlimited)
   --time-limit <min>   Max time to run in minutes (default: unlimited)
   --reset              Reset and reprocess all documents from scratch
@@ -396,10 +396,10 @@ NOTES:
   - Automatically detects which documents need embedding
 
 EXAMPLES:
-  mdq embed --path ~/docs --verbose
-  mdq embed --path ~/docs --batch-size 50 --verbose
-  mdq embed --path ~/docs --time-limit 5 --verbose
-  mdq embed --path ~/docs --reset --verbose
+  mdq embed                           # Embed all registered sources
+  mdq embed --path ~/docs --verbose   # Embed specific directory
+  mdq embed --batch-size 50           # Limit to 50 documents per source
+  mdq embed --reset                   # Reprocess all documents
   mdq embed status
 `);
 			break;
@@ -638,8 +638,41 @@ export async function run(args: string[]): Promise<void> {
 				break;
 
 			case 'index': {
-				const result = await runSearchIndexCommand(basePath, parsed.options.verbose);
-				console.log(formatter.format(result));
+				// If --path is explicitly specified, index just that path
+				if (parsed.options.path) {
+					const result = await runSearchIndexCommand(basePath, parsed.options.verbose);
+					console.log(formatter.format(result));
+				} else {
+					// Otherwise, index all registered sources
+					const registered = listRegisteredSources();
+					if (registered.length === 0) {
+						console.error('No registered sources found.');
+						console.error('Either register sources with "mdq source add" or specify --path');
+						process.exit(EXIT_CODES.INVALID_ARGS);
+					}
+
+					// Validate that registered paths exist
+					const missingPaths: string[] = [];
+					for (const s of registered) {
+						if (!fs.existsSync(s.path)) {
+							missingPaths.push(`  ${s.name}: ${s.path}`);
+						}
+					}
+					if (missingPaths.length > 0) {
+						console.error('Some registered source paths do not exist:');
+						for (const p of missingPaths) {
+							console.error(p);
+						}
+						process.exit(EXIT_CODES.INVALID_ARGS);
+					}
+
+					// Index each registered source
+					for (const source of registered) {
+						console.log(`Indexing ${source.name} (${source.path})...`);
+						const result = await runSearchIndexCommand(source.path, parsed.options.verbose);
+						console.log(formatter.format(result));
+					}
+				}
 				break;
 			}
 
@@ -780,16 +813,49 @@ export async function run(args: string[]): Promise<void> {
 					break;
 				}
 
-				const result = await runEmbedCommand(basePath, {
+				const embedOptions = {
 					batchSize: parsed.options.batchSize,
 					timeLimitMinutes: parsed.options.timeLimitMinutes,
 					reset: parsed.options.reset,
 					dryRun: parsed.options.dryRun,
 					verbose: parsed.options.verbose,
-				});
+				};
 
-				// Always output result summary
-				console.log(formatter.format(result));
+				// If --path is explicitly specified, embed just that path
+				if (parsed.options.path) {
+					const result = await runEmbedCommand(basePath, embedOptions);
+					console.log(formatter.format(result));
+				} else {
+					// Otherwise, embed all registered sources
+					const registered = listRegisteredSources();
+					if (registered.length === 0) {
+						console.error('No registered sources found.');
+						console.error('Either register sources with "mdq source add" or specify --path');
+						process.exit(EXIT_CODES.INVALID_ARGS);
+					}
+
+					// Validate that registered paths exist
+					const missingPaths: string[] = [];
+					for (const s of registered) {
+						if (!fs.existsSync(s.path)) {
+							missingPaths.push(`  ${s.name}: ${s.path}`);
+						}
+					}
+					if (missingPaths.length > 0) {
+						console.error('Some registered source paths do not exist:');
+						for (const p of missingPaths) {
+							console.error(p);
+						}
+						process.exit(EXIT_CODES.INVALID_ARGS);
+					}
+
+					// Embed each registered source
+					for (const source of registered) {
+						console.log(`Embedding ${source.name} (${source.path})...`);
+						const result = await runEmbedCommand(source.path, embedOptions);
+						console.log(formatter.format(result));
+					}
+				}
 				break;
 			}
 

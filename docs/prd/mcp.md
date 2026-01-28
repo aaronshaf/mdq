@@ -56,8 +56,8 @@ Sources can be registered persistently using `md source` commands, eliminating t
 
 ```bash
 # Register sources once
-md source add ~/docs --desc "Documentation"
-md source add ~/wiki --desc "Team wiki"
+md source add -s ~/docs -d "Documentation"
+md source add -s ~/wiki -d "Team wiki"
 md source list
 
 # Start MCP server (uses registered sources)
@@ -76,10 +76,7 @@ md mcp
 Sources can also be provided directly on the command line (overrides registered sources):
 
 ```bash
-# Multiple directories
-md mcp ~/docs ~/wiki ~/notes
-
-# With descriptions (helps AI know when to search each source)
+# Multiple sources with descriptions
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # Explicit names to avoid collisions
@@ -248,7 +245,7 @@ Read the full content of a specific file.
 For local MCP clients like Claude Code and Claude Desktop:
 
 ```bash
-md mcp ~/docs
+md mcp -s ~/docs -d "Documentation"
 ```
 
 ### HTTP
@@ -257,7 +254,7 @@ For remote access from Claude web UI or other HTTP clients:
 
 ```bash
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http ~/docs
+md mcp --http -s ~/docs -d "Documentation"
 md mcp --http --port 8080 --host 0.0.0.0 ~/docs
 ```
 
@@ -291,8 +288,8 @@ ngrok http 3000
 
 ```bash
 # Register sources first (one-time setup)
-md source add ~/notes --desc "Personal journal"
-md source add ~/wiki --desc "Team docs"
+md source add -s ~/notes -d "Personal journal"
+md source add -s ~/wiki -d "Team docs"
 
 # Add MCP server (uses registered sources)
 claude mcp add kb -- md mcp

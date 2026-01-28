@@ -494,7 +494,7 @@ EXAMPLES:
   md search "authentication"
   md index --path ~/docs
   md embed --path ~/docs --verbose
-  md source add ~/docs --desc "Documentation"
+  md source add -s ~/docs -d "Documentation"
   md mcp
 `);
 	}

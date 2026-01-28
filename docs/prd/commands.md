@@ -278,22 +278,15 @@ md mcp [sources...] [options]
 
 ```bash
 # Use registered sources (recommended)
-md source add ~/docs --desc "Documentation"
+md source add -s ~/docs -d "Documentation"
 md mcp
 
-# Single directory (CLI override)
-md mcp ~/docs
-
-# Multiple directories
-md mcp ~/docs ~/wiki ~/notes
-
-# With descriptions
+# CLI override with descriptions
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # HTTP mode
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http ~/docs
-md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+md mcp --http -s ~/docs -d "Documentation"
 ```
 
 **Startup (stderr):**

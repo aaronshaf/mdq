@@ -23,10 +23,10 @@ Add **HTTP transport** as an optional mode for the MCP server:
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
 
 # Start HTTP server
-md mcp --http ~/docs
+md mcp --http -s ~/docs -d "Documentation"
 
 # Custom port/host
-md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 Users expose the server via tunnel (Cloudflare Tunnel, ngrok) to connect from Claude web UI.

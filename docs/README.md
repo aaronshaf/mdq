@@ -279,11 +279,11 @@ Expose your markdown content to AI assistants via Model Context Protocol.
 
 ```bash
 # Using registered sources (recommended)
-md source add ~/docs --desc "Documentation"
+md source add -s ~/docs -d "Documentation"
 md mcp
 
 # Or specify sources directly
-md mcp ~/docs
+md mcp -s ~/docs -d "Documentation"
 ```
 
 ### Source Resolution
@@ -295,10 +295,7 @@ md mcp ~/docs
 ### Multiple Sources (CLI)
 
 ```bash
-# Multiple directories
-md mcp ~/docs ~/wiki ~/notes
-
-# With descriptions (recommended)
+# Multiple sources with descriptions
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # Explicit names
@@ -316,8 +313,8 @@ md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 
 ```bash
 # Register sources first (one-time)
-md source add ~/notes --desc "Personal journal"
-md source add ~/wiki --desc "Team knowledge base"
+md source add -s ~/notes -d "Personal journal"
+md source add -s ~/wiki -d "Team knowledge base"
 
 # Add MCP server (uses registered sources)
 claude mcp add kb -- md mcp
@@ -359,10 +356,10 @@ Run the MCP server over HTTP for Claude web UI or remote clients:
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
 
 # Start HTTP server
-md mcp --http ~/docs
+md mcp --http -s ~/docs -d "Documentation"
 
 # Custom port/host
-md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 **Expose to internet:**

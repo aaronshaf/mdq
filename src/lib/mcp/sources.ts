@@ -1,22 +1,10 @@
-import os from 'node:os';
 import path from 'node:path';
+import { expandTilde } from '../path-utils.js';
 
 export interface Source {
 	name: string;
 	path: string;
 	description?: string;
-}
-
-/**
- * Expand leading ~ to user's home directory.
- * Handles `~` and `~/path` but not:
- *   - `~user/path` (different user's home - not supported)
- *   - `foo/~/bar` (~ in middle of path - not expanded)
- */
-function expandTilde(p: string): string {
-	if (p === '~') return os.homedir();
-	if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2));
-	return p;
 }
 
 export interface ParseSourcesResult {

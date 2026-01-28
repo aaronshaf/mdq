@@ -43,6 +43,7 @@
 | `md index` | Build/rebuild the search index |
 | `md embed` | Generate embeddings for semantic search |
 | `md embed status` | Check LLM and embedding connectivity |
+| `md source` | Manage registered sources for MCP server |
 | `md mcp [sources...]` | Start MCP server for AI assistants |
 
 ## Frontmatter Support
@@ -65,12 +66,20 @@ Documents with missing fields are still indexed - filters simply won't match the
 
 ## Configuration
 
-No configuration file required. Settings via environment variables:
+Minimal configuration required. Most settings via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MEILISEARCH_HOST` | `http://localhost:7700` | Meilisearch server URL |
 | `MEILISEARCH_API_KEY` | (none) | API key if Meilisearch requires auth |
+
+**Config files:**
+
+| File | Description |
+|------|-------------|
+| `~/.config/md/sources.json` | Registered sources for MCP server |
+
+The `XDG_CONFIG_HOME` environment variable is respected for config file location.
 
 ## User Flows
 
@@ -111,15 +120,19 @@ Processed 142 documents in 5m 23s
 ### MCP Integration
 
 ```bash
-# Add to Claude Code
-claude mcp add kb -- md mcp ~/docs
+# Register sources once
+md source add ~/docs --desc "Documentation"
+md source add ~/wiki --desc "Team wiki"
+
+# Add to Claude Code (uses registered sources)
+claude mcp add kb -- md mcp
 
 # Or configure directly in ~/.claude/mcp.json
 {
   "mcpServers": {
     "my-docs": {
       "command": "md",
-      "args": ["mcp", "/path/to/docs"]
+      "args": ["mcp"]
     }
   }
 }

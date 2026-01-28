@@ -19,6 +19,7 @@ Users need a way to expose their indexed markdown content directly to AI assista
 | Zero config for users | Setup complexity | Single command to start |
 | Full search parity | Feature coverage | All `md search` filters supported |
 | Multiple sources | Index multiple directories | Supported with descriptions |
+| Registered sources | Persist source config | Store in `~/.config/md/sources.json` |
 | Remote access | HTTP transport | Supported for Claude web UI |
 
 ## Non-Goals
@@ -49,9 +50,30 @@ Users need a way to expose their indexed markdown content directly to AI assista
 1. **Meilisearch running** - Same requirement as `md search`
 2. **Index exists** - User must run `md index` first
 
-## Multiple Sources
+## Registered Sources
 
-The MCP server can serve multiple directories, each with its own index:
+Sources can be registered persistently using `md source` commands, eliminating the need to specify them on each `md mcp` invocation.
+
+```bash
+# Register sources once
+md source add ~/docs --desc "Documentation"
+md source add ~/wiki --desc "Team wiki"
+md source list
+
+# Start MCP server (uses registered sources)
+md mcp
+```
+
+**Source resolution order:**
+1. If CLI sources provided → use those (registered sources ignored)
+2. If no CLI sources → use registered sources
+3. If no registered sources → error with helpful message
+
+**Storage:** `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`)
+
+## Multiple Sources (CLI)
+
+Sources can also be provided directly on the command line (overrides registered sources):
 
 ```bash
 # Multiple directories
@@ -268,13 +290,12 @@ ngrok http 3000
 ### Claude Code
 
 ```bash
-# Add via CLI
-claude mcp add kb -- md mcp ~/docs
+# Register sources first (one-time setup)
+md source add ~/notes --desc "Personal journal"
+md source add ~/wiki --desc "Team docs"
 
-# With multiple sources
-claude mcp add kb -- md mcp \
-  -s ~/notes -d "Personal journal" \
-  -s ~/wiki -d "Team docs"
+# Add MCP server (uses registered sources)
+claude mcp add kb -- md mcp
 ```
 
 Or add to `~/.claude/mcp.json`:
@@ -284,7 +305,7 @@ Or add to `~/.claude/mcp.json`:
   "mcpServers": {
     "kb": {
       "command": "md",
-      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal", "-s", "~/wiki", "-d", "Team docs"]
+      "args": ["mcp"]
     }
   }
 }
@@ -299,7 +320,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "kb": {
       "command": "md",
-      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal"]
+      "args": ["mcp"]
     }
   }
 }
@@ -320,12 +341,16 @@ Add to `.vscode/mcp.json`:
 }
 ```
 
+Note: VS Code typically uses workspace-relative paths, so CLI sources are often preferred here.
+
 ## Error Handling
 
 ### Startup Errors
 
 | Condition | Exit Code | stderr Message |
 |-----------|-----------|----------------|
+| No sources (CLI or registered) | 6 | `Error: No sources provided and no sources registered` |
+| Registered source path missing | 6 | `Error: Some registered source paths no longer exist` |
 | Meilisearch unavailable | 9 | `Error: Meilisearch not available` |
 | Index not found | 10 | `Error: No search index found` |
 | No API key (HTTP mode) | 6 | `Error: API key required for HTTP mode` |
@@ -347,17 +372,21 @@ Return MCP error responses:
 ```
 src/
 ├── lib/
+│   ├── config/
+│   │   └── sources.ts         # Registered sources config (~/.config/md/sources.json)
+│   ├── path-utils.ts          # Shared path utilities (tilde expansion)
 │   └── mcp/
 │       ├── index.ts           # MCP module exports
 │       ├── server.ts          # McpServer setup and transport
 │       ├── http.ts            # HTTP transport implementation
 │       ├── handlers.ts        # Tool implementations
 │       ├── tools.ts           # Tool schemas
-│       ├── sources.ts         # Multi-source handling
+│       ├── sources.ts         # Multi-source handling (CLI parsing)
 │       └── types.ts           # MCP-specific types
 └── cli/
     └── commands/
-        └── mcp.ts             # md mcp command
+        ├── mcp.ts             # md mcp command
+        └── source.ts          # md source command
 ```
 
 ### Dependencies

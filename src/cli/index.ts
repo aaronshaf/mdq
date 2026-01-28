@@ -1,6 +1,8 @@
+import fs from 'node:fs';
+import { listSources as listRegisteredSources } from '../lib/config/sources.js';
 import { EXIT_CODES, type MdError, getExitCode } from '../lib/errors.js';
 import { getFormatter } from '../lib/formatters.js';
-import { parseSources } from '../lib/mcp/sources.js';
+import { type Source, parseSources } from '../lib/mcp/sources.js';
 import { runEmbedCommand, runEmbedStatusCommand } from './commands/embed.js';
 import { runMcpCommand } from './commands/mcp.js';
 import {
@@ -9,6 +11,7 @@ import {
 	runSearchStatusCommand,
 	runStatusCommand,
 } from './commands/search.js';
+import { type SourceCommandArgs, runSourceCommand } from './commands/source.js';
 
 // Read version at module load time - Bun resolves JSON imports synchronously
 import packageJson from '../../package.json';
@@ -53,6 +56,9 @@ interface ParsedArgs {
 		port?: number;
 		host?: string;
 		apiKey?: string;
+		// Source command options
+		name?: string;
+		description?: string;
 	};
 }
 
@@ -78,7 +84,9 @@ type StringFlag =
 	| 'stale'
 	| 'sort'
 	| 'host'
-	| 'apiKey';
+	| 'apiKey'
+	| 'name'
+	| 'description';
 
 type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
 const VALID_SORT_VALUES = new Set<string>([
@@ -114,6 +122,9 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--stale': 'stale',
 	'--host': 'host',
 	'--api-key': 'apiKey',
+	'--name': 'name',
+	'--desc': 'description',
+	'--description': 'description',
 };
 
 function handlePositionalArg(result: ParsedArgs, arg: string): void {
@@ -122,6 +133,12 @@ function handlePositionalArg(result: ParsedArgs, arg: string): void {
 	} else if (!result.subcommand && result.command === 'search' && arg === 'status') {
 		result.subcommand = arg;
 	} else if (!result.subcommand && result.command === 'embed' && arg === 'status') {
+		result.subcommand = arg;
+	} else if (
+		!result.subcommand &&
+		result.command === 'source' &&
+		['add', 'list', 'remove'].includes(arg)
+	) {
 		result.subcommand = arg;
 	} else {
 		result.positional.push(arg);
@@ -382,6 +399,30 @@ EXAMPLES:
 `);
 			break;
 
+		case 'source':
+			console.log(`md source - Manage registered sources for MCP server
+
+USAGE:
+  md source add <path> [options]   Add a source directory
+  md source list                   List all registered sources
+  md source remove <name>          Remove a source by name
+
+OPTIONS (for add):
+  --name <name>            Explicit name (default: directory basename)
+  --desc <description>     Description of the source
+
+NOTES:
+  Registered sources are automatically loaded by 'md mcp' when no
+  CLI sources are provided. Sources are stored in ~/.config/md/sources.json
+
+EXAMPLES:
+  md source add ~/inst/confluence/ENG --desc "Engineering knowledge base"
+  md source add ~/inst/confluence/ENGWIKI --name engwiki --desc "Engineering Wiki"
+  md source list
+  md source remove engwiki
+`);
+			break;
+
 		case 'mcp':
 			console.log(`md mcp - Start MCP server for AI assistant integration
 
@@ -405,8 +446,14 @@ HTTP MODE OPTIONS:
   --api-key <string>       API key for authentication (or set MD_MCP_API_KEY)
   --no-auth                Disable authentication (for testing only)
 
+NOTES:
+  If no sources are provided, registered sources from 'md source add' are used.
+  Use 'md source list' to see registered sources.
+  CLI sources (-s flags) override registered sources.
+
 EXAMPLES:
-  md mcp ~/docs
+  md mcp                        # uses registered sources
+  md mcp ~/docs                 # uses only ~/docs (ignores registered)
   md mcp ~/docs ~/wiki ~/notes
   md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
@@ -430,6 +477,7 @@ COMMANDS:
   index              Build/rebuild the search index
   embed              Generate embeddings for semantic search
   embed status       Check embedding service and Meilisearch connectivity
+  source             Manage registered sources for MCP server
   mcp [sources...]   Start MCP server for AI assistant integration
 
 GLOBAL OPTIONS:
@@ -443,7 +491,8 @@ EXAMPLES:
   md search "authentication"
   md index --path ~/docs
   md embed --path ~/docs --verbose
-  md mcp ~/docs
+  md source add ~/docs --desc "Documentation"
+  md mcp
 `);
 	}
 }
@@ -545,6 +594,19 @@ export async function run(args: string[]): Promise<void> {
 				break;
 			}
 
+			case 'source': {
+				const sourceArgs: SourceCommandArgs = {
+					subcommand: parsed.subcommand ?? '',
+					positional: parsed.positional,
+					options: {
+						name: parsed.options.name,
+						desc: parsed.options.description,
+					},
+				};
+				runSourceCommand(sourceArgs);
+				break;
+			}
+
 			case 'mcp': {
 				// Build source args from -s/-d flags and positional args
 				// Flag-based sources: -s path -d "description"
@@ -559,15 +621,59 @@ export async function run(args: string[]): Promise<void> {
 				// Add positional sources
 				sourceArgs.push(...parsed.positional);
 
-				// Default to cwd if no sources specified
-				const finalSourceArgs = sourceArgs.length > 0 ? sourceArgs : [basePath];
-				const { sources, errors } = parseSources(finalSourceArgs);
+				// Determine sources: CLI args override registered, otherwise use registered
+				let sources: Source[];
 
-				if (errors.length > 0) {
-					for (const error of errors) {
-						console.error(`Error: ${error}`);
+				if (sourceArgs.length > 0) {
+					// CLI sources provided - use those (override registered)
+					const parseResult = parseSources(sourceArgs);
+					if (parseResult.errors.length > 0) {
+						for (const error of parseResult.errors) {
+							console.error(`Error: ${error}`);
+						}
+						process.exit(EXIT_CODES.INVALID_ARGS);
 					}
-					process.exit(EXIT_CODES.INVALID_ARGS);
+					sources = parseResult.sources;
+				} else {
+					// No CLI sources - try to load registered sources
+					const registered = listRegisteredSources();
+					if (registered.length > 0) {
+						// Validate that registered paths still exist
+						const missingPaths: string[] = [];
+						for (const s of registered) {
+							if (!fs.existsSync(s.path)) {
+								missingPaths.push(`  ${s.name}: ${s.path}`);
+							}
+						}
+						if (missingPaths.length > 0) {
+							console.error('Error: Some registered source paths no longer exist:');
+							for (const msg of missingPaths) {
+								console.error(msg);
+							}
+							console.error('');
+							console.error('Remove invalid sources with:');
+							console.error('  md source remove <name>');
+							process.exit(EXIT_CODES.INVALID_ARGS);
+						}
+
+						sources = registered.map((s) => ({
+							name: s.name,
+							path: s.path,
+							description: s.description,
+						}));
+					} else {
+						// No registered sources - show helpful error
+						console.error('Error: No sources provided and no sources registered.');
+						console.error('');
+						console.error('Either provide sources on the command line:');
+						console.error('  md mcp ~/docs');
+						console.error('  md mcp -s ~/docs -d "Documentation"');
+						console.error('');
+						console.error('Or register sources first:');
+						console.error('  md source add ~/docs --desc "Documentation"');
+						console.error('  md mcp');
+						process.exit(EXIT_CODES.INVALID_ARGS);
+					}
 				}
 
 				if (sources.length === 0) {

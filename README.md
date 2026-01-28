@@ -33,6 +33,7 @@ md status              Check if Meilisearch is running
 md search <query>      Search indexed content
 md index               Build/rebuild index
 md embed               Generate embeddings for semantic search
+md source              Manage registered sources for MCP server
 md mcp [sources...]    Start MCP server
 ```
 
@@ -41,18 +42,24 @@ Run `md <command> --help` for command-specific options.
 ## MCP Server
 
 ```bash
-# Single directory
-md mcp ~/docs
+# Register sources (one-time setup)
+md source add ~/docs --desc "Documentation"
+md source add ~/wiki --desc "Team wiki"
+md source list
 
-# Multiple directories with descriptions
+# Start MCP server (uses registered sources)
+md mcp
+
+# Or specify sources directly (overrides registered)
+md mcp ~/docs
 md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # HTTP mode for remote access (Claude web UI)
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http ~/docs
+md mcp --http
 
 # Add to Claude Code
-claude mcp add kb -- md mcp ~/docs
+claude mcp add kb -- md mcp
 ```
 
 ## Documentation

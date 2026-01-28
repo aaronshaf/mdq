@@ -188,6 +188,48 @@ Processing documents...
 Processed 142 documents
 ```
 
+### md source
+
+Manage registered sources for the MCP server. Sources are stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`).
+
+```
+md source add <path> [options]   Add a source directory
+md source list                   List all registered sources
+md source remove <name>          Remove a source by name
+```
+
+**Options (for add):**
+
+| Option | Description |
+|--------|-------------|
+| `--name <name>` | Explicit name (default: directory basename) |
+| `--desc <description>` | Description of the source |
+
+**Examples:**
+
+```bash
+# Add a source
+md source add ~/inst/confluence/ENG --desc "Engineering knowledge base"
+
+# Add with explicit name
+md source add ~/inst/confluence/ENGWIKI --name engwiki --desc "Engineering Wiki"
+
+# List registered sources
+md source list
+
+# Remove a source
+md source remove engwiki
+```
+
+**Output (list):**
+
+```
+NAME     PATH                           DESCRIPTION
+----     ----                           -----------
+eng      /Users/me/inst/confluence/ENG  Engineering knowledge base
+engwiki  /Users/me/inst/confluence/ENGWIKI  Engineering Wiki
+```
+
 ### md mcp
 
 Launch an MCP server for AI assistant integration.
@@ -196,7 +238,13 @@ Launch an MCP server for AI assistant integration.
 md mcp [sources...] [options]
 ```
 
-**Source Formats:**
+**Source Resolution:**
+
+1. If CLI sources are provided, use those (ignores registered sources)
+2. If no CLI sources, use registered sources from `md source add`
+3. If no registered sources, show helpful error
+
+**Source Formats (CLI):**
 
 | Format | Description |
 |--------|-------------|
@@ -225,7 +273,11 @@ md mcp [sources...] [options]
 **Examples:**
 
 ```bash
-# Single directory
+# Use registered sources (recommended)
+md source add ~/docs --desc "Documentation"
+md mcp
+
+# Single directory (CLI override)
 md mcp ~/docs
 
 # Multiple directories

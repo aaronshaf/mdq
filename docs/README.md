@@ -8,6 +8,7 @@ Complete guide for indexing and searching local markdown files.
 - [Search](#search)
 - [Ignoring Files](#ignoring-files)
 - [Embeddings](#embeddings-semantic-search)
+- [Source Management](#source-management)
 - [MCP Server](#mcp-server)
 - [Configuration](#configuration)
 - [Frontmatter](#frontmatter)
@@ -236,6 +237,39 @@ export MD_EMBEDDING_API_KEY="your-key"
 - **API key fallback**: `MD_EMBEDDING_API_KEY` falls back to `MD_LLM_API_KEY` if not set
 - **Provider detection**: Endpoints containing `localhost:11434` use Ollama protocol; all others use OpenAI protocol
 
+## Source Management
+
+Register sources for the MCP server, eliminating the need to specify them on each invocation.
+
+### Commands
+
+```bash
+md source add <path> [--name <name>] [--desc <description>]
+md source list
+md source remove <name>
+```
+
+### Usage
+
+```bash
+# Register sources
+md source add ~/docs --desc "Documentation"
+md source add ~/wiki --name team-wiki --desc "Team knowledge base"
+
+# List registered sources
+md source list
+
+# Remove a source
+md source remove team-wiki
+```
+
+### Notes
+
+- Sources stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`)
+- Name defaults to directory basename (lowercase)
+- Names cannot contain `:` or `|` (reserved syntax)
+- CLI sources to `md mcp` override registered sources
+
 ## MCP Server
 
 Expose your markdown content to AI assistants via Model Context Protocol.
@@ -243,10 +277,21 @@ Expose your markdown content to AI assistants via Model Context Protocol.
 ### Basic Usage
 
 ```bash
+# Using registered sources (recommended)
+md source add ~/docs --desc "Documentation"
+md mcp
+
+# Or specify sources directly
 md mcp ~/docs
 ```
 
-### Multiple Sources
+### Source Resolution
+
+1. If CLI sources provided → use those (registered sources ignored)
+2. If no CLI sources → use registered sources
+3. If no registered sources → error with helpful message
+
+### Multiple Sources (CLI)
 
 ```bash
 # Multiple directories
@@ -269,13 +314,12 @@ md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 ### Claude Code CLI
 
 ```bash
-# Add MCP server
-claude mcp add kb -- md mcp ~/docs
+# Register sources first (one-time)
+md source add ~/notes --desc "Personal journal"
+md source add ~/wiki --desc "Team knowledge base"
 
-# With descriptions
-claude mcp add kb -- md mcp \
-  -s ~/notes -d "Personal journal" \
-  -s ~/wiki -d "Team knowledge base"
+# Add MCP server (uses registered sources)
+claude mcp add kb -- md mcp
 
 # Scope options
 --scope local      # Just this project (default)
@@ -297,11 +341,13 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "kb": {
       "command": "md",
-      "args": ["mcp", "-s", "~/notes", "-d", "Personal journal"]
+      "args": ["mcp"]
     }
   }
 }
 ```
+
+Note: Register sources first with `md source add`.
 
 ### HTTP Mode (Remote Access)
 
@@ -335,6 +381,8 @@ ngrok http 3000
 
 ## Configuration
 
+### Environment Variables
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MEILISEARCH_HOST` | `http://localhost:7700` | Meilisearch server URL |
@@ -347,6 +395,16 @@ ngrok http 3000
 | `MD_EMBEDDING_MODEL` | `nomic-embed-text:latest` | Embedding model |
 | `MD_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
 | `MD_EMBEDDING_API_KEY` | - | Embedding API key (for cloud providers) |
+
+### Config Files
+
+| File | Description |
+|------|-------------|
+| `~/.config/md/sources.json` | Registered sources for MCP server |
+
+The `XDG_CONFIG_HOME` environment variable is respected for config file location.
+
+### Notes
 
 **Index naming:** `~/docs/wiki` becomes `md-docs-wiki`
 

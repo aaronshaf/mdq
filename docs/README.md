@@ -332,7 +332,12 @@ claude mcp remove kb     # Remove
 
 ### Claude Desktop
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Edit the Claude Desktop config file:
+
+| OS | Path |
+|----|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 
 ```json
 {
@@ -345,7 +350,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Note: Register sources first with `md source add`.
+Note: Register sources first with `md source add -s <path> -d <description>`.
 
 ### HTTP Mode (Remote Access)
 

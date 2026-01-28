@@ -310,7 +310,12 @@ Or add to `~/.claude/mcp.json`:
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+Edit the Claude Desktop config file:
+
+| OS | Path |
+|----|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 
 ```json
 {
@@ -322,6 +327,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   }
 }
 ```
+
+Note: Register sources first with `md source add -s <path> -d <description>`.
 
 ### VS Code (Copilot)
 

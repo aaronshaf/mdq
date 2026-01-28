@@ -369,9 +369,10 @@ Note: Register sources first with `md source add -s <path> -d <description>`.
 
 ### Quick Setup via Claude
 
-First, find your `md` path:
+First, find your paths:
 ```bash
-which md
+which bun  # e.g., /Users/you/.bun/bin/bun
+which md   # e.g., /Users/you/.bun/bin/md
 ```
 
 Then ask Claude:
@@ -379,10 +380,10 @@ Then ask Claude:
 **Claude Code:**
 > Add MCP server "kb" with command `md mcp` (user scope)
 
-**Claude Desktop:**
-> Add MCP server "kb" to Claude Desktop config using command `/path/to/md` with args `["mcp"]`
+**Claude Desktop (bun install):**
+> Add MCP server "kb" to Claude Desktop config using command `/Users/you/.bun/bin/bun` with args `["run", "/Users/you/.bun/bin/md", "mcp"]`
 
-Note: Claude Desktop requires the full path (e.g., `/Users/you/.bun/bin/md`) since it doesn't inherit your shell PATH.
+Note: Claude Desktop requires full paths and bun installs need bun as the command (not md directly) since it doesn't inherit your shell PATH.
 
 ### HTTP Mode (Remote Access)
 

@@ -255,7 +255,7 @@ For remote access from Claude web UI or other HTTP clients:
 ```bash
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"
 md mcp --http -s ~/docs -d "Documentation"
-md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 **Configuration:**
@@ -324,6 +324,18 @@ Edit the Claude Desktop config file:
     "kb": {
       "command": "/Users/YOU/.bun/bin/bun",
       "args": ["run", "/Users/YOU/.bun/bin/md", "mcp"]
+    }
+  }
+}
+```
+
+**If installed via npm/node:**
+```json
+{
+  "mcpServers": {
+    "kb": {
+      "command": "node",
+      "args": ["/path/to/node_modules/@aaronshaf/md/src/cli.js", "mcp"]
     }
   }
 }

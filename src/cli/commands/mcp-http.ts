@@ -10,26 +10,25 @@ import type { Source } from '../../lib/mcp/sources.js';
 import type { SearchClient } from '../../lib/search/index.js';
 import { indexDirectory } from '../../lib/search/index.js';
 
-// Dynamic import to work around MCP SDK not exporting this module in package.json
-// See: https://github.com/modelcontextprotocol/sdk/issues/XXX (pending upstream fix)
-// This path may break with different package managers (pnpm, monorepos) or SDK versions.
-// Requires @modelcontextprotocol/sdk@^1.25.3
+// Import using the SDK's wildcard export pattern
+// The SDK package.json includes: "./*": { "import": "./dist/esm/*" }
+// which allows importing internal modules directly
 async function loadWebStandardTransport() {
-	// Use absolute path from project root to import the module
-	const modulePath = new URL(
-		'../../../node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js',
-		import.meta.url,
-	).pathname;
-
 	try {
-		const module = await import(modulePath);
+		const module = await import('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js');
 		if (!module.WebStandardStreamableHTTPServerTransport) {
 			throw new Error('WebStandardStreamableHTTPServerTransport not found in module');
 		}
 		return module.WebStandardStreamableHTTPServerTransport;
 	} catch (error) {
-		const errorMsg =
-			error instanceof Error ? error.message : 'Unknown error loading MCP HTTP transport';
+		// Enhanced error reporting for better diagnostics
+		let errorMsg: string;
+		if (error instanceof Error) {
+			errorMsg = error.message;
+		} else {
+			errorMsg = `Non-Error thrown: ${JSON.stringify(error)}`;
+		}
+
 		throw new Error(
 			`Failed to load MCP HTTP transport. This may be due to an incompatible MCP SDK version. Expected: @modelcontextprotocol/sdk@^1.25.3. Error: ${errorMsg}`,
 		);

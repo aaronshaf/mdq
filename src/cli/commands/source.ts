@@ -22,8 +22,8 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 
 	if (!sourceArg) {
 		console.error('Error: Path is required');
-		console.error('Usage: md source add <path> [--desc <description>]');
-		console.error('       md source add name:path [--desc <description>]');
+		console.error('Usage: md source add <path> [-d <description>]');
+		console.error('       md source add name:path [-d <description>]');
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 

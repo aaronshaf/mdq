@@ -123,6 +123,7 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--host': 'host',
 	'--api-key': 'apiKey',
 	'--name': 'name',
+	'-d': 'description',
 	'--desc': 'description',
 	'--description': 'description',
 };
@@ -403,13 +404,13 @@ EXAMPLES:
 			console.log(`md source - Manage registered sources for MCP server
 
 USAGE:
-  md source add <path> [options]     Add a source directory
-  md source add name:path [options]  Add with explicit name
-  md source list                     List all registered sources
-  md source remove <name>            Remove a source by name
+  md source add <path> [-d <desc>]     Add a source directory
+  md source add name:path [-d <desc>]  Add with explicit name
+  md source list                       List all registered sources
+  md source remove <name>              Remove a source by name
 
 OPTIONS (for add):
-  --desc <description>     Description of the source
+  -d <description>     Description of the source
 
 NOTES:
   Registered sources are automatically loaded by 'md mcp' when no
@@ -417,8 +418,8 @@ NOTES:
 
 EXAMPLES:
   md source add ~/docs
-  md source add ~/docs --desc "Documentation"
-  md source add kb:~/docs --desc "Knowledge base"
+  md source add ~/docs -d "Documentation"
+  md source add kb:~/docs -d "Knowledge base"
   md source list
   md source remove kb
 `);

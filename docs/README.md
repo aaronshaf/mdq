@@ -352,6 +352,19 @@ Edit the Claude Desktop config file:
 
 Note: Register sources first with `md source add -s <path> -d <description>`.
 
+### Quick Setup via Claude
+
+Ask Claude to set it up for you:
+
+**Claude Code (project scope):**
+> Add md mcp server called "kb" to this project
+
+**Claude Code (user scope):**
+> Add md mcp server called "kb" with user scope
+
+**Claude Desktop:**
+> Add md mcp server called "kb" to Claude Desktop config
+
 ### HTTP Mode (Remote Access)
 
 Run the MCP server over HTTP for Claude web UI or remote clients:

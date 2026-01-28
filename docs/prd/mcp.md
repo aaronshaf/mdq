@@ -321,12 +321,14 @@ Edit the Claude Desktop config file:
 {
   "mcpServers": {
     "kb": {
-      "command": "md",
+      "command": "/full/path/to/md",
       "args": ["mcp"]
     }
   }
 }
 ```
+
+**Important:** Use the full path to `md` (run `which md` to find it). Claude Desktop doesn't inherit your shell PATH.
 
 Note: Register sources first with `md source add -s <path> -d <description>`.
 

@@ -343,27 +343,33 @@ Edit the Claude Desktop config file:
 {
   "mcpServers": {
     "kb": {
-      "command": "md",
+      "command": "/full/path/to/md",
       "args": ["mcp"]
     }
   }
 }
 ```
 
+**Important:** Use the full path to `md` (run `which md` to find it). Claude Desktop doesn't inherit your shell PATH.
+
 Note: Register sources first with `md source add -s <path> -d <description>`.
 
 ### Quick Setup via Claude
 
-Ask Claude to set it up for you:
+First, find your `md` path:
+```bash
+which md
+```
 
-**Claude Code (project scope):**
-> Add md mcp server called "kb" to this project
+Then ask Claude:
 
-**Claude Code (user scope):**
-> Add md mcp server called "kb" with user scope
+**Claude Code:**
+> Add MCP server "kb" with command `md mcp` (user scope)
 
 **Claude Desktop:**
-> Add md mcp server called "kb" to Claude Desktop config
+> Add MCP server "kb" to Claude Desktop config using command `/path/to/md` with args `["mcp"]`
+
+Note: Claude Desktop requires the full path (e.g., `/Users/you/.bun/bin/md`) since it doesn't inherit your shell PATH.
 
 ### HTTP Mode (Remote Access)
 

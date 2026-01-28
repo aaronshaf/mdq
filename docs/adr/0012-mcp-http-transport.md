@@ -20,13 +20,13 @@ Add **HTTP transport** as an optional mode for the MCP server:
 
 ```bash
 # Generate API key
-export MD_MCP_API_KEY="$(openssl rand -hex 32)"
+export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
 
 # Start HTTP server
-md mcp --http -s ~/docs -d "Documentation"
+mdq mcp --http -s ~/docs -d "Documentation"
 
 # Custom port/host
-md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
+mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 Users expose the server via tunnel (Cloudflare Tunnel, ngrok) to connect from Claude web UI.
@@ -86,11 +86,11 @@ Users expose the server via tunnel (Cloudflare Tunnel, ngrok) to connect from Cl
 | Flag | Environment | Default | Description |
 |------|-------------|---------|-------------|
 | `--http` | - | false | Enable HTTP transport |
-| `--port` | `MD_MCP_PORT` | 3000 | Port to bind |
-| `--host` | `MD_MCP_HOST` | 127.0.0.1 | Host to bind |
-| `--api-key` | `MD_MCP_API_KEY` | (required) | Authentication key |
+| `--port` | `MDQ_MCP_PORT` | 3000 | Port to bind |
+| `--host` | `MDQ_MCP_HOST` | 127.0.0.1 | Host to bind |
+| `--api-key` | `MDQ_MCP_API_KEY` | (required) | Authentication key |
 | `--no-auth` | - | false | Disable auth (testing) |
-| - | `MD_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
+| - | `MDQ_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
 
 ### Endpoint
 

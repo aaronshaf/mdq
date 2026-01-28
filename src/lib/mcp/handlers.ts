@@ -97,7 +97,7 @@ export async function handleSearch(
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			console.error(`[md] search error for source "${source.name}": ${message}`);
+			console.error(`[mdq] search error for source "${source.name}": ${message}`);
 			return {
 				source: source.name,
 				results: [],
@@ -226,7 +226,7 @@ export async function handleRead(
 		} catch (error) {
 			// Log and continue to next source on errors (e.g., missing index, network issues)
 			const message = error instanceof Error ? error.message : String(error);
-			console.error(`[md] read error for source "${source.name}": ${message}`);
+			console.error(`[mdq] read error for source "${source.name}": ${message}`);
 		}
 	}
 

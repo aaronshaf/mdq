@@ -32,7 +32,7 @@ Chunk documents and embed each chunk directly. This provides:
 
 ## Decision
 
-Implement **chunked embeddings** via `md embed` command that:
+Implement **chunked embeddings** via `mdq embed` command that:
 
 1. **Chunks documents** into smaller pieces (respecting paragraph/sentence boundaries)
 2. **Generates embeddings** for each chunk using configurable embedding model (default: Ollama with nomic-embed-text)
@@ -41,13 +41,13 @@ Implement **chunked embeddings** via `md embed` command that:
 
 ```bash
 # Index documents
-md index --path ~/docs
+mdq index --path ~/docs
 
 # Generate embeddings
-md embed --path ~/docs --verbose
+mdq embed --path ~/docs --verbose
 
 # Search uses hybrid mode automatically
-md search "authentication concepts"
+mdq search "authentication concepts"
 ```
 
 ## Rationale
@@ -94,7 +94,7 @@ md search "authentication concepts"
 
 ### Mitigations
 
-- `md embed status` verifies embedding service connectivity
+- `mdq embed status` verifies embedding service connectivity
 - Batch processing with `--batch-size` and `--time-limit`
 - Incremental updates (only processes changed documents)
 - `--reset` flag to reprocess everything if needed

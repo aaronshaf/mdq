@@ -14,11 +14,11 @@ export interface Config {
 
 /**
  * Get the path to the config file.
- * Respects XDG_CONFIG_HOME, defaults to ~/.config/md/sources.json
+ * Respects XDG_CONFIG_HOME, defaults to ~/.config/mdq/sources.json
  */
 export function getConfigPath(): string {
 	const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-	return path.join(configHome, 'md', 'sources.json');
+	return path.join(configHome, 'mdq', 'sources.json');
 }
 
 /**

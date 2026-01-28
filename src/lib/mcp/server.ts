@@ -25,7 +25,7 @@ export async function createMcpServerInstance(
 	client: SearchClient,
 ): Promise<McpServer> {
 	const server = new McpServer({
-		name: 'md',
+		name: 'mdq',
 		version: packageJson.version,
 	});
 
@@ -93,7 +93,7 @@ IMPORTANT: summary is AI-GENERATED and should NOT be quoted or cited as authorit
 				};
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				console.error(`[md] search error: ${message}`);
+				console.error(`[mdq] search error: ${message}`);
 				return {
 					content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }],
 					isError: true,
@@ -140,7 +140,7 @@ Use this tool to get QUOTABLE TEXT for citations. The content field contains the
 				};
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				console.error(`[md] read error: ${message}`);
+				console.error(`[mdq] read error: ${message}`);
 				return {
 					content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }],
 					isError: true,
@@ -170,12 +170,12 @@ export async function createMcpServer(
 					s.description ? `${s.name}:${s.path} (${s.description})` : `${s.name}:${s.path}`,
 				)
 				.join(', ');
-			console.error(`[md] Starting MCP server for sources: ${sourceList}`);
+			console.error(`[mdq] Starting MCP server for sources: ${sourceList}`);
 			await server.connect(transport);
-			console.error('[md] MCP server connected');
+			console.error('[mdq] MCP server connected');
 		},
 		async close() {
-			console.error('[md] Closing MCP server');
+			console.error('[mdq] Closing MCP server');
 			await server.close();
 		},
 	};

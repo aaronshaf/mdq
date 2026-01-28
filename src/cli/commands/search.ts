@@ -23,10 +23,7 @@ export async function runSearchCommand(
 	}
 
 	if (status.documentCount === undefined) {
-		throw createNotFoundError(
-			`Index "${indexName}" not found. Run "md search index" first.`,
-			indexName,
-		);
+		throw createNotFoundError(`Index "${indexName}" not found. Run "mdq index" first.`, indexName);
 	}
 
 	return client.search(indexName, options);

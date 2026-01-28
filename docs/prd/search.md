@@ -1,4 +1,4 @@
-# md search - Product Requirements Document
+# mdq search - Product Requirements Document
 
 ## Problem Statement
 
@@ -19,7 +19,7 @@ Users need fast, typo-tolerant, offline search across their markdown content wit
 | Offline capable | Search works without network | 100% offline |
 | Filterable | Filter by labels, author, date | Supported (when metadata present) |
 | Source agnostic | Work with markdown from any source | cn, git, manual, etc. |
-| Semantic search | Find by meaning, not just keywords | Optional (via `md embed`) |
+| Semantic search | Find by meaning, not just keywords | Optional (via `mdq embed`) |
 
 ## Non-Goals
 
@@ -33,13 +33,13 @@ Integrate [Meilisearch](https://www.meilisearch.com/) as a local search engine. 
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Local Markdown │────▶│    md index      │────▶│   Meilisearch   │
+│  Local Markdown │────▶│    mdq index      │────▶│   Meilisearch   │
 │     Files       │     │                  │     │  (localhost)    │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
                                                          │
                                                          ▼
 ┌─────────────────┐                              ┌─────────────────┐
-│  md search      │─────────────────────────────▶│  Search Results │
+│  mdq search     │─────────────────────────────▶│  Search Results │
 │    "query"      │                              │  (ranked)       │
 └─────────────────┘                              └─────────────────┘
 ```
@@ -92,7 +92,7 @@ interface SearchDocument {
   reference: string | null // Citation string for source attribution
   child_count: number | null // Number of child pages (for hub detection)
 
-  // Embedding fields (optional - from md embed)
+  // Embedding fields (optional - from mdq embed)
   embedded_at: number | null    // Timestamp when embeddings were generated
   // Note: Embeddings stored in separate chunks index
 }
@@ -150,7 +150,7 @@ Sanitization: lowercase, replace non-alphanumeric with hyphen.
 
 ## Hybrid Search
 
-When documents have embeddings (via `md embed`), search automatically uses hybrid mode:
+When documents have embeddings (via `mdq embed`), search automatically uses hybrid mode:
 
 1. **Keyword search**: Traditional full-text with typo tolerance
 2. **Semantic search**: Vector similarity using embeddings
@@ -196,7 +196,7 @@ archive/
 
 ## Indexing Behavior
 
-`md index` always performs a **full reindex**:
+`mdq index` always performs a **full reindex**:
 
 1. Delete existing index for the directory
 2. Scan all markdown files (respecting exclusions)
@@ -209,17 +209,17 @@ This approach:
 
 ## Empty Query Support
 
-An empty query (`md search ""`) returns all documents. Filters still apply:
+An empty query (`mdq search ""`) returns all documents. Filters still apply:
 
 ```bash
 # Find all stale documentation
-md search "" --stale 90d --labels documentation
+mdq search "" --stale 90d --labels documentation
 
 # Browse all docs with a specific label
-md search "" --labels api
+mdq search "" --labels api
 
 # Show 5 most recently updated
-md search "" --limit 5 --sort -updated_at
+mdq search "" --limit 5 --sort -updated_at
 ```
 
 ## Error Handling
@@ -227,7 +227,7 @@ md search "" --limit 5 --sort -updated_at
 | Error | Exit Code | Message |
 |-------|-----------|---------|
 | Meilisearch not running | 9 | `Meilisearch not available at {url}` |
-| Index not found | 10 | `No search index found. Run 'md index' first.` |
+| Index not found | 10 | `No search index found. Run 'mdq index' first.` |
 | No results | 0 | `No results found for "{query}"` |
 | Invalid filter | 6 | `Invalid filter: {details}` |
 
@@ -247,8 +247,8 @@ src/
 │       └── types.ts           # Search types
 └── cli/
     └── commands/
-        ├── search.ts          # md search command
-        └── embed.ts           # md embed command
+        ├── search.ts          # mdq search command
+        └── embed.ts           # mdq embed command
 ```
 
 ### Dependencies

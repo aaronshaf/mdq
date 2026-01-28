@@ -4,7 +4,7 @@
   "description": "CLI tool for indexing and searching local markdown files via Meilisearch",
   "type": "module",
   "bin": {
-    "md": "./src/cli.ts"
+    "mdq": "./src/cli.ts"
   },
   "scripts": {
     "dev": "bun run src/cli.ts",

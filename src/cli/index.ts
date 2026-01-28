@@ -307,27 +307,27 @@ function parseArgs(args: string[]): ParseResult {
 function printHelp(command?: string): void {
 	switch (command) {
 		case 'status':
-			console.log(`md status - Check if Meilisearch is running
+			console.log(`mdq status - Check if Meilisearch is running
 
 USAGE:
-  md status [options]
+  mdq status [options]
 
 OPTIONS:
   --json             Output in JSON format
   --xml              Output in XML format
 
 EXAMPLES:
-  md status
-  md status --json
+  mdq status
+  mdq status --json
 `);
 			break;
 
 		case 'search':
-			console.log(`md search - Search indexed markdown content
+			console.log(`mdq search - Search indexed markdown content
 
 USAGE:
-  md search <query> [options]
-  md search status    Check index status
+  mdq search <query> [options]
+  mdq search status    Check index status
 
 OPTIONS:
   --path <dir>             Directory to search (default: current directory)
@@ -346,18 +346,18 @@ OPTIONS:
   --xml                    Output in XML format
 
 EXAMPLES:
-  md search "authentication"
-  md search "" --labels api,docs --limit 5
-  md search "old" --stale 90d
-  md search status
+  mdq search "authentication"
+  mdq search "" --labels api,docs --limit 5
+  mdq search "old" --stale 90d
+  mdq search status
 `);
 			break;
 
 		case 'index':
-			console.log(`md index - Build/rebuild the search index
+			console.log(`mdq index - Build/rebuild the search index
 
 USAGE:
-  md index [options]
+  mdq index [options]
 
 OPTIONS:
   --path <dir>       Directory to index (default: current directory)
@@ -366,18 +366,18 @@ OPTIONS:
   --xml              Output in XML format
 
 EXAMPLES:
-  md index
-  md index --path ~/docs
-  md index --path ~/docs --verbose
+  mdq index
+  mdq index --path ~/docs
+  mdq index --path ~/docs --verbose
 `);
 			break;
 
 		case 'embed':
-			console.log(`md embed - Generate embeddings for semantic search
+			console.log(`mdq embed - Generate embeddings for semantic search
 
 USAGE:
-  md embed [options]
-  md embed status    Check embedding service and Meilisearch connectivity
+  mdq embed [options]
+  mdq embed status    Check embedding service and Meilisearch connectivity
 
 OPTIONS:
   --path <dir>         Directory to process (default: current directory)
@@ -396,45 +396,45 @@ NOTES:
   - Automatically detects which documents need embedding
 
 EXAMPLES:
-  md embed --path ~/docs --verbose
-  md embed --path ~/docs --batch-size 50 --verbose
-  md embed --path ~/docs --time-limit 5 --verbose
-  md embed --path ~/docs --reset --verbose
-  md embed status
+  mdq embed --path ~/docs --verbose
+  mdq embed --path ~/docs --batch-size 50 --verbose
+  mdq embed --path ~/docs --time-limit 5 --verbose
+  mdq embed --path ~/docs --reset --verbose
+  mdq embed status
 `);
 			break;
 
 		case 'source':
-			console.log(`md source - Manage registered sources for MCP server
+			console.log(`mdq source - Manage registered sources for MCP server
 
 USAGE:
-  md source add -s <path> [-d <desc>]       Add a source directory
-  md source add -s name:path [-d <desc>]    Add with explicit name
-  md source list                            List all registered sources
-  md source remove <name>                   Remove a source by name
+  mdq source add -s <path> [-d <desc>]       Add a source directory
+  mdq source add -s name:path [-d <desc>]    Add with explicit name
+  mdq source list                            List all registered sources
+  mdq source remove <name>                   Remove a source by name
 
 OPTIONS (for add):
   -s <path>            Source path (required)
   -d <description>     Description of the source
 
 NOTES:
-  Registered sources are automatically loaded by 'md mcp' when no
-  CLI sources are provided. Sources are stored in ~/.config/md/sources.json
+  Registered sources are automatically loaded by 'mdq mcp' when no
+  CLI sources are provided. Sources are stored in ~/.config/mdq/sources.json
 
 EXAMPLES:
-  md source add -s ~/docs
-  md source add -s ~/docs -d "Documentation"
-  md source add -s kb:~/docs -d "Knowledge base"
-  md source list
-  md source remove kb
+  mdq source add -s ~/docs
+  mdq source add -s ~/docs -d "Documentation"
+  mdq source add -s kb:~/docs -d "Knowledge base"
+  mdq source list
+  mdq source remove kb
 `);
 			break;
 
 		case 'mcp':
-			console.log(`md mcp - Start MCP server for AI assistant integration
+			console.log(`mdq mcp - Start MCP server for AI assistant integration
 
 USAGE:
-  md mcp [sources...] [options]
+  mdq mcp [sources...] [options]
 
 SOURCE FORMATS:
   ~/docs                           Single directory
@@ -451,32 +451,32 @@ HTTP MODE OPTIONS:
   --http                   Enable HTTP transport (for remote access)
   --port <number>          Port to bind (default: 3000)
   --host <string>          Host to bind (default: 127.0.0.1)
-  --api-key <string>       API key for authentication (or set MD_MCP_API_KEY)
+  --api-key <string>       API key for authentication (or set MDQ_MCP_API_KEY)
   --no-auth                Disable authentication (for testing only)
 
 NOTES:
-  If no sources are provided, registered sources from 'md source add' are used.
-  Use 'md source list' to see registered sources.
+  If no sources are provided, registered sources from 'mdq source add' are used.
+  Use 'mdq source list' to see registered sources.
   CLI sources (-s flags) override registered sources.
 
 EXAMPLES:
-  md mcp                        # uses registered sources
-  md mcp ~/docs                 # uses only ~/docs (ignores registered)
-  md mcp ~/docs ~/wiki ~/notes
-  md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+  mdq mcp                        # uses registered sources
+  mdq mcp ~/docs                 # uses only ~/docs (ignores registered)
+  mdq mcp ~/docs ~/wiki ~/notes
+  mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
   # HTTP mode for remote access
-  export MD_MCP_API_KEY="your-secret-key-here"
-  md mcp --http ~/docs
-  md mcp --http --port 8080 --host 0.0.0.0 ~/docs
+  export MDQ_MCP_API_KEY="your-secret-key-here"
+  mdq mcp --http ~/docs
+  mdq mcp --http --port 8080 --host 0.0.0.0 ~/docs
 `);
 			break;
 
 		default:
-			console.log(`md - Markdown file indexer and search CLI
+			console.log(`mdq - Markdown file indexer and search CLI
 
 USAGE:
-  md <command> [options]
+  mdq <command> [options]
 
 COMMANDS:
   status             Check if Meilisearch is running
@@ -492,21 +492,21 @@ GLOBAL OPTIONS:
   -h, --help         Show this help message
   -v, --version      Show version number
 
-Run "md <command> --help" for command-specific help.
+Run "mdq <command> --help" for command-specific help.
 
 EXAMPLES:
-  md status
-  md search "authentication"
-  md index --path ~/docs
-  md embed --path ~/docs --verbose
-  md source add -s ~/docs -d "Documentation"
-  md mcp
+  mdq status
+  mdq search "authentication"
+  mdq index --path ~/docs
+  mdq embed --path ~/docs --verbose
+  mdq source add -s ~/docs -d "Documentation"
+  mdq mcp
 `);
 	}
 }
 
 function printVersion(): void {
-	console.log(`md version ${VERSION}`);
+	console.log(`mdq version ${VERSION}`);
 }
 
 interface McpServerConfig {
@@ -522,7 +522,7 @@ interface McpConfig {
 
 function generateMcpConfig(): McpConfig {
 	const execPath = process.execPath; // e.g., /Users/you/.bun/bin/bun or /usr/local/bin/node
-	const scriptPath = process.argv[1] ?? ''; // e.g., /Users/you/.bun/bin/md
+	const scriptPath = process.argv[1] ?? ''; // e.g., /Users/you/.bun/bin/mdq
 
 	// Detect if running via bun
 	const isBun = execPath.includes('bun') || process.versions.bun !== undefined;
@@ -705,7 +705,7 @@ export async function run(args: string[]): Promise<void> {
 							}
 							console.error('');
 							console.error('Remove invalid sources with:');
-							console.error('  md source remove <name>');
+							console.error('  mdq source remove <name>');
 							process.exit(EXIT_CODES.INVALID_ARGS);
 						}
 
@@ -719,12 +719,12 @@ export async function run(args: string[]): Promise<void> {
 						console.error('Error: No sources provided and no sources registered.');
 						console.error('');
 						console.error('Either provide sources on the command line:');
-						console.error('  md mcp ~/docs');
-						console.error('  md mcp -s ~/docs -d "Documentation"');
+						console.error('  mdq mcp ~/docs');
+						console.error('  mdq mcp -s ~/docs -d "Documentation"');
 						console.error('');
 						console.error('Or register sources first:');
-						console.error('  md source add ~/docs --desc "Documentation"');
-						console.error('  md mcp');
+						console.error('  mdq source add ~/docs --desc "Documentation"');
+						console.error('  mdq mcp');
 						process.exit(EXIT_CODES.INVALID_ARGS);
 					}
 				}
@@ -747,15 +747,15 @@ export async function run(args: string[]): Promise<void> {
 
 				if (parsed.options.http) {
 					// Get API key from flag or environment
-					const apiKey = parsed.options.apiKey ?? process.env.MD_MCP_API_KEY ?? '';
+					const apiKey = parsed.options.apiKey ?? process.env.MDQ_MCP_API_KEY ?? '';
 
 					// Get port from flag, environment, or default
 					const port =
 						parsed.options.port ??
-						(process.env.MD_MCP_PORT ? Number.parseInt(process.env.MD_MCP_PORT, 10) : 3000);
+						(process.env.MDQ_MCP_PORT ? Number.parseInt(process.env.MDQ_MCP_PORT, 10) : 3000);
 
 					// Get host from flag, environment, or default (localhost-only)
-					const host = parsed.options.host ?? process.env.MD_MCP_HOST ?? '127.0.0.1';
+					const host = parsed.options.host ?? process.env.MDQ_MCP_HOST ?? '127.0.0.1';
 
 					httpOptions = {
 						enabled: true,

@@ -32,12 +32,12 @@ Support `--xml` flag for structured XML output on relevant commands.
 ```
 
 ### Commands with XML Support
-- `md search` - Search results
-- `md search status` - Index status
+- `mdq search` - Search results
+- `mdq search status` - Index status
 
 ### Output Examples
 
-#### md search --xml
+#### mdq search --xml
 ```xml
 <search-results query="authentication" count="3">
   <result rank="1">
@@ -53,7 +53,7 @@ Support `--xml` flag for structured XML output on relevant commands.
 </search-results>
 ```
 
-#### md search status --xml
+#### mdq search status --xml
 ```xml
 <search-status>
   <meilisearch status="connected" url="http://localhost:7700"/>

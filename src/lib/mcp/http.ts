@@ -34,7 +34,7 @@ export function createHttpTransportManager(): HttpTransportManager {
 					}
 					transports.delete(sessionId);
 					lastActivity.delete(sessionId);
-					console.error(`[md] Session timed out: ${sessionId}`);
+					console.error(`[mdq] Session timed out: ${sessionId}`);
 				}
 			}
 		}
@@ -83,10 +83,10 @@ export function createAuthError(): Response {
 }
 
 // CORS headers for browser-based clients (Claude web UI)
-// Configurable via MD_MCP_CORS_ORIGIN env var (default: restrictive)
+// Configurable via MDQ_MCP_CORS_ORIGIN env var (default: restrictive)
 export function corsHeaders(): Record<string, string> {
 	// Default to claude.ai only; use '*' for development/testing
-	const allowedOrigin = process.env.MD_MCP_CORS_ORIGIN ?? 'https://claude.ai';
+	const allowedOrigin = process.env.MDQ_MCP_CORS_ORIGIN ?? 'https://claude.ai';
 	return {
 		'Access-Control-Allow-Origin': allowedOrigin,
 		'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',

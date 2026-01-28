@@ -1,4 +1,4 @@
-# md Documentation
+# mdq Documentation
 
 Complete guide for indexing and searching local markdown files.
 
@@ -27,7 +27,7 @@ Complete guide for indexing and searching local markdown files.
 curl -fsSL https://bun.sh/install | bash
 ```
 
-### Step 2: Install md
+### Step 2: Install mdq
 
 ```bash
 bun install -g @aaronshaf/md
@@ -48,8 +48,8 @@ Data persists at `~/.meilisearch/data` across container removals and restarts.
 ### Step 4: Index and Search
 
 ```bash
-md index --path ~/docs
-md search "query"
+mdq index --path ~/docs
+mdq search "query"
 ```
 
 ## Search
@@ -57,9 +57,9 @@ md search "query"
 ### Basic Usage
 
 ```bash
-md search "authentication"
-md search "auth" --limit 20
-md search "" --labels api,docs    # Browse by label
+mdq search "authentication"
+mdq search "auth" --limit 20
+mdq search "" --labels api,docs    # Browse by label
 ```
 
 ### Filtering Options
@@ -81,16 +81,16 @@ md search "" --labels api,docs    # Browse by label
 ### Output Formats
 
 ```bash
-md search "api" --json    # JSON output
-md search "api" --xml     # XML output (LLM-friendly)
+mdq search "api" --json    # JSON output
+mdq search "api" --xml     # XML output (LLM-friendly)
 ```
 
 ### Examples
 
 ```bash
-md search "api" --labels docs --limit 5
-md search "" --stale 90d                    # Find stale content
-md search "security" --sort -updated_at     # Most recently updated
+mdq search "api" --labels docs --limit 5
+mdq search "" --stale 90d                    # Find stale content
+mdq search "security" --sort -updated_at     # Most recently updated
 ```
 
 ## Ignoring Files
@@ -127,7 +127,7 @@ archive/
 
 - Patterns evaluated in order (later patterns can override earlier)
 - Directory patterns must end with `/`
-- Run `md index` after adding patterns to remove newly-ignored files
+- Run `mdq index` after adding patterns to remove newly-ignored files
 
 ## Embeddings (Semantic Search)
 
@@ -135,21 +135,21 @@ Enhance your index with vector embeddings for semantic search. Documents are chu
 
 ### Prerequisites
 
-1. Basic index exists: `md index --path ~/docs`
+1. Basic index exists: `mdq index --path ~/docs`
 2. Ollama running with embedding model (default: `nomic-embed-text:latest`)
 
 ```bash
 ollama pull nomic-embed-text
-md embed status    # Check readiness
+mdq embed status    # Check readiness
 ```
 
 ### Usage
 
 ```bash
-md embed --path ~/docs --verbose
+mdq embed --path ~/docs --verbose
 ```
 
-This chunks each document and generates vector embeddings for semantic search. Once embeddings exist, `md search` automatically uses hybrid search (keyword + semantic).
+This chunks each document and generates vector embeddings for semantic search. Once embeddings exist, `mdq search` automatically uses hybrid search (keyword + semantic).
 
 ### Options
 
@@ -165,10 +165,10 @@ This chunks each document and generates vector embeddings for semantic search. O
 
 ```bash
 # Process in batches
-md embed --path ~/docs --batch-size 20 --verbose
+mdq embed --path ~/docs --batch-size 20 --verbose
 
 # Or use time limits
-md embed --path ~/docs --time-limit 10 --verbose
+mdq embed --path ~/docs --time-limit 10 --verbose
 ```
 
 ### Configuration
@@ -233,7 +233,7 @@ export MD_EMBEDDING_API_KEY="your-key"
 #### Important Notes
 
 - **Dimensions must match**: Set `MD_EMBEDDING_DIMENSIONS` to your model's output size
-- **Changing models requires reindex**: Meilisearch embedder dimensions are immutable once set. Use `md embed --reset` after changing models
+- **Changing models requires reindex**: Meilisearch embedder dimensions are immutable once set. Use `mdq embed --reset` after changing models
 - **API key fallback**: `MD_EMBEDDING_API_KEY` falls back to `MD_LLM_API_KEY` if not set
 - **Provider detection**: Endpoints containing `localhost:11434` use Ollama protocol; all others use OpenAI protocol
 
@@ -244,32 +244,32 @@ Register sources for the MCP server, eliminating the need to specify them on eac
 ### Commands
 
 ```bash
-md source add -s <path> [-d <description>]
-md source add -s name:path [-d <description>]
-md source list
-md source remove <name>
+mdq source add -s <path> [-d <description>]
+mdq source add -s name:path [-d <description>]
+mdq source list
+mdq source remove <name>
 ```
 
 ### Usage
 
 ```bash
 # Register sources
-md source add -s ~/docs -d "Documentation"
-md source add -s kb:~/wiki -d "Team knowledge base"
+mdq source add -s ~/docs -d "Documentation"
+mdq source add -s kb:~/wiki -d "Team knowledge base"
 
 # List registered sources
-md source list
+mdq source list
 
 # Remove a source
-md source remove kb
+mdq source remove kb
 ```
 
 ### Notes
 
-- Sources stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`)
+- Sources stored in `~/.config/mdq/sources.json` (or `$XDG_CONFIG_HOME/mdq/sources.json`)
 - Name defaults to directory basename (lowercase)
 - Use `name:path` syntax for explicit names
-- CLI sources to `md mcp` override registered sources
+- CLI sources to `mdq mcp` override registered sources
 
 ## MCP Server
 
@@ -279,11 +279,11 @@ Expose your markdown content to AI assistants via Model Context Protocol.
 
 ```bash
 # Using registered sources (recommended)
-md source add -s ~/docs -d "Documentation"
-md mcp
+mdq source add -s ~/docs -d "Documentation"
+mdq mcp
 
 # Or specify sources directly
-md mcp -s ~/docs -d "Documentation"
+mdq mcp -s ~/docs -d "Documentation"
 ```
 
 ### Source Resolution
@@ -296,10 +296,10 @@ md mcp -s ~/docs -d "Documentation"
 
 ```bash
 # Multiple sources with descriptions
-md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # Explicit names
-md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
+mdq mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 ```
 
 ### Tools
@@ -313,11 +313,11 @@ md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 
 ```bash
 # Register sources first (one-time)
-md source add -s ~/notes -d "Personal journal"
-md source add -s ~/wiki -d "Team knowledge base"
+mdq source add -s ~/notes -d "Personal journal"
+mdq source add -s ~/wiki -d "Team knowledge base"
 
 # Add MCP server (uses registered sources)
-claude mcp add kb -- md mcp
+claude mcp add kb -- mdq mcp
 
 # Scope options
 --scope local      # Just this project (default)
@@ -345,7 +345,7 @@ Edit the Claude Desktop config file:
   "mcpServers": {
     "kb": {
       "command": "/Users/YOU/.bun/bin/bun",
-      "args": ["run", "/Users/YOU/.bun/bin/md", "mcp"]
+      "args": ["run", "/Users/YOU/.bun/bin/mdq", "mcp"]
     }
   }
 }
@@ -365,30 +365,30 @@ Edit the Claude Desktop config file:
 
 **Auto-generate config:**
 ```bash
-md mcp --print-config
+mdq mcp --print-config
 ```
 
 This outputs the correct JSON for your installation method (bun or node) with full paths.
 
 **Important:** Claude Desktop doesn't inherit your shell PATH.
 
-Note: Register sources first with `md source add -s <path> -d <description>`.
+Note: Register sources first with `mdq source add -s <path> -d <description>`.
 
 ### Quick Setup via Claude
 
 First, find your paths:
 ```bash
 which bun  # e.g., /Users/you/.bun/bin/bun
-which md   # e.g., /Users/you/.bun/bin/md
+which mdq   # e.g., /Users/you/.bun/bin/mdq
 ```
 
 Then ask Claude:
 
 **Claude Code:**
-> Add MCP server "kb" with command `md mcp` (user scope)
+> Add MCP server "kb" with command `mdq mcp` (user scope)
 
 **Claude Desktop (bun install):**
-> Add MCP server "kb" to Claude Desktop config using command `/Users/you/.bun/bin/bun` with args `["run", "/Users/you/.bun/bin/md", "mcp"]`
+> Add MCP server "kb" to Claude Desktop config using command `/Users/you/.bun/bin/bun` with args `["run", "/Users/you/.bun/bin/mdq", "mcp"]`
 
 Note: Claude Desktop requires full paths and bun installs need bun as the command (not md directly) since it doesn't inherit your shell PATH.
 
@@ -398,13 +398,13 @@ Run the MCP server over HTTP for Claude web UI or remote clients:
 
 ```bash
 # Generate API key
-export MD_MCP_API_KEY="$(openssl rand -hex 32)"
+export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
 
 # Start HTTP server
-md mcp --http -s ~/docs -d "Documentation"
+mdq mcp --http -s ~/docs -d "Documentation"
 
 # Custom port/host
-md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
+mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 **Expose to internet:**
@@ -420,7 +420,7 @@ ngrok http 3000
 **Connect from Claude web UI:**
 1. Settings > Connectors > "Add custom connector"
 2. Name: `My Docs`, URL: `https://your-tunnel-url.com/mcp`
-3. Provide your `MD_MCP_API_KEY` when prompted
+3. Provide your `MDQ_MCP_API_KEY` when prompted
 
 ## Configuration
 
@@ -430,10 +430,10 @@ ngrok http 3000
 |----------|---------|-------------|
 | `MEILISEARCH_HOST` | `http://localhost:7700` | Meilisearch server URL |
 | `MEILISEARCH_API_KEY` | - | Meilisearch API key |
-| `MD_MCP_API_KEY` | - | API key for HTTP mode |
-| `MD_MCP_PORT` | `3000` | HTTP mode port |
-| `MD_MCP_HOST` | `127.0.0.1` | HTTP mode host |
-| `MD_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
+| `MDQ_MCP_API_KEY` | - | API key for HTTP mode |
+| `MDQ_MCP_PORT` | `3000` | HTTP mode port |
+| `MDQ_MCP_HOST` | `127.0.0.1` | HTTP mode host |
+| `MDQ_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
 | `MD_EMBEDDING_ENDPOINT` | `http://localhost:11434` | Embedding endpoint |
 | `MD_EMBEDDING_MODEL` | `nomic-embed-text:latest` | Embedding model |
 | `MD_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
@@ -443,7 +443,7 @@ ngrok http 3000
 
 | File | Description |
 |------|-------------|
-| `~/.config/md/sources.json` | Registered sources for MCP server |
+| `~/.config/mdq/sources.json` | Registered sources for MCP server |
 
 The `XDG_CONFIG_HOME` environment variable is respected for config file location.
 

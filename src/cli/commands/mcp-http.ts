@@ -47,7 +47,7 @@ export async function runHttpMcpServer(
 	},
 ): Promise<void> {
 	// Index all sources (same as stdio mode)
-	console.error(`[md] Indexing ${sources.length} source(s)...`);
+	console.error(`[mdq] Indexing ${sources.length} source(s)...`);
 	const indexResults = await Promise.allSettled(
 		sources.map(async (source) => {
 			const result = await indexDirectory(source.path, client);
@@ -58,11 +58,11 @@ export async function runHttpMcpServer(
 	for (const outcome of indexResults) {
 		if (outcome.status === 'fulfilled') {
 			const { source, result } = outcome.value;
-			console.error(`[md] Indexed ${result.indexed} documents from ${source.name}`);
+			console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
 		} else {
 			const reason =
 				outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-			console.error(`[md] Warning: Indexing failed: ${reason}`);
+			console.error(`[mdq] Warning: Indexing failed: ${reason}`);
 		}
 	}
 
@@ -92,7 +92,7 @@ export async function runHttpMcpServer(
 		// All /mcp endpoints require authentication (unless --no-auth)
 		if (url.pathname === '/mcp') {
 			if (!options.noAuth && !validateBearerToken(req, options.apiKey)) {
-				console.error('[md] Authentication failed');
+				console.error('[mdq] Authentication failed');
 				return createAuthError();
 			}
 
@@ -107,7 +107,7 @@ export async function runHttpMcpServer(
 						await existingTransport.close();
 						transportManager.transports.delete(sessionIdFromHeader);
 						transportManager.lastActivity.delete(sessionIdFromHeader);
-						console.error(`[md] Session closed: ${sessionIdFromHeader}`);
+						console.error(`[mdq] Session closed: ${sessionIdFromHeader}`);
 					}
 				}
 				return new Response(null, { status: 200, headers: corsHeaders() });
@@ -127,7 +127,7 @@ export async function runHttpMcpServer(
 						// Store transport when session is actually initialized
 						transportManager.transports.set(sessionId, newTransport);
 						transportManager.touch(sessionId);
-						console.error(`[md] New session created: ${sessionId}`);
+						console.error(`[mdq] New session created: ${sessionId}`);
 					},
 				});
 				transport = newTransport;
@@ -153,7 +153,7 @@ export async function runHttpMcpServer(
 					headers,
 				});
 			} catch (error) {
-				console.error('[md] Error handling request:', error);
+				console.error('[mdq] Error handling request:', error);
 				return new Response(JSON.stringify({ error: 'Internal server error' }), {
 					status: 500,
 					headers: { 'Content-Type': 'application/json', ...corsHeaders() },
@@ -176,25 +176,25 @@ export async function runHttpMcpServer(
 		.map((s) => (s.description ? `${s.name}:${s.path} (${s.description})` : `${s.name}:${s.path}`))
 		.join(', ');
 
-	console.error(`[md] HTTP MCP server started for sources: ${sourceList}`);
-	console.error(`[md] Listening on http://${options.host}:${options.port}/mcp`);
-	console.error(`[md] Health check: http://${options.host}:${options.port}/health`);
+	console.error(`[mdq] HTTP MCP server started for sources: ${sourceList}`);
+	console.error(`[mdq] Listening on http://${options.host}:${options.port}/mcp`);
+	console.error(`[mdq] Health check: http://${options.host}:${options.port}/health`);
 	if (options.noAuth) {
-		console.error('[md] Authentication: DISABLED (--no-auth)');
-		console.error('[md] WARNING: Server is running without authentication!');
+		console.error('[mdq] Authentication: DISABLED (--no-auth)');
+		console.error('[mdq] WARNING: Server is running without authentication!');
 	} else {
-		console.error('[md] Authentication: Bearer token required');
+		console.error('[mdq] Authentication: Bearer token required');
 	}
 
 	// Security warning for non-localhost binding
 	if (options.host !== '127.0.0.1' && options.host !== 'localhost') {
-		console.error('[md] WARNING: Server is binding to non-localhost address.');
-		console.error('[md] Ensure your firewall and network are properly configured.');
+		console.error('[mdq] WARNING: Server is binding to non-localhost address.');
+		console.error('[mdq] Ensure your firewall and network are properly configured.');
 	}
 
 	// Graceful shutdown
 	const shutdown = async () => {
-		console.error('\n[md] Shutting down HTTP server...');
+		console.error('\n[mdq] Shutting down HTTP server...');
 		server.stop();
 		await transportManager.cleanup();
 		await mcpServer.close();

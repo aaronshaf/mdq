@@ -1,4 +1,4 @@
-# md CLI Commands
+# mdq CLI Commands
 
 ## Global Options
 
@@ -13,12 +13,12 @@
 
 ## Commands
 
-### md status
+### mdq status
 
 Check if Meilisearch is running.
 
 ```
-md status [options]
+mdq status [options]
 ```
 
 **Output (connected):**
@@ -33,13 +33,13 @@ Meilisearch: healthy (http://localhost:7700)
 Meilisearch: not available
 ```
 
-### md search
+### mdq search
 
 Search indexed markdown content.
 
 ```
-md search <query> [options]
-md search status    Check index status
+mdq search <query> [options]
+mdq search status    Check index status
 ```
 
 **Options:**
@@ -62,31 +62,31 @@ md search status    Check index status
 
 ```bash
 # Basic search
-md search "authentication"
+mdq search "authentication"
 
 # Search with typo (still finds "authentication")
-md search "authentcation"
+mdq search "authentcation"
 
 # Filter by label
-md search "api" --labels documentation
+mdq search "api" --labels documentation
 
 # Date filtering
-md search "api" --updated-within 30d
+mdq search "api" --updated-within 30d
 
 # Find stale content
-md search "" --stale 90d --labels documentation
+mdq search "" --stale 90d --labels documentation
 
 # Browse all docs with a label
-md search "" --labels api
+mdq search "" --labels api
 
 # Sort by most recently updated
-md search "security" --sort -updated_at --limit 10
+mdq search "security" --sort -updated_at --limit 10
 
 # JSON output for scripting
-md search "error handling" --json
+mdq search "error handling" --json
 
 # Search in specific directory
-md search "setup" --path ~/docs/wiki
+mdq search "setup" --path ~/docs/wiki
 ```
 
 **Output (text):**
@@ -103,12 +103,12 @@ Found 3 results for "authentication"
    ...token-based authentication using JWT...
 ```
 
-### md index
+### mdq index
 
 Build the search index. Always performs a full reindex.
 
 ```
-md index [options]
+mdq index [options]
 ```
 
 **Options:**
@@ -121,9 +121,9 @@ md index [options]
 **Examples:**
 
 ```bash
-md index
-md index --path ~/docs/wiki
-md index --path ~/docs --verbose
+mdq index
+mdq index --path ~/docs/wiki
+mdq index --path ~/docs --verbose
 ```
 
 **Output:**
@@ -138,13 +138,13 @@ Indexed 142 documents in 1.2s
 
 **Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdignore` are automatically excluded.
 
-### md embed
+### mdq embed
 
 Generate vector embeddings for semantic search.
 
 ```
-md embed [options]
-md embed status    Check LLM and Meilisearch connectivity
+mdq embed [options]
+mdq embed status    Check LLM and Meilisearch connectivity
 ```
 
 **Options:**
@@ -162,19 +162,19 @@ md embed status    Check LLM and Meilisearch connectivity
 
 ```bash
 # Process all documents
-md embed --path ~/docs --verbose
+mdq embed --path ~/docs --verbose
 
 # Process in batches
-md embed --path ~/docs --batch-size 50 --verbose
+mdq embed --path ~/docs --batch-size 50 --verbose
 
 # Time-limited processing
-md embed --path ~/docs --time-limit 10 --verbose
+mdq embed --path ~/docs --time-limit 10 --verbose
 
 # Reset and reprocess
-md embed --path ~/docs --reset --verbose
+mdq embed --path ~/docs --reset --verbose
 
 # Check status
-md embed status
+mdq embed status
 ```
 
 **Output (verbose):**
@@ -188,15 +188,15 @@ Processing documents...
 Processed 142 documents
 ```
 
-### md source
+### mdq source
 
-Manage registered sources for the MCP server. Sources are stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`).
+Manage registered sources for the MCP server. Sources are stored in `~/.config/mdq/sources.json` (or `$XDG_CONFIG_HOME/mdq/sources.json`).
 
 ```
-md source add -s <path> [-d <desc>]       Add a source directory
-md source add -s name:path [-d <desc>]    Add with explicit name
-md source list                            List all registered sources
-md source remove <name>                   Remove a source by name
+mdq source add -s <path> [-d <desc>]       Add a source directory
+mdq source add -s name:path [-d <desc>]    Add with explicit name
+mdq source list                            List all registered sources
+mdq source remove <name>                   Remove a source by name
 ```
 
 **Options (for add):**
@@ -210,19 +210,19 @@ md source remove <name>                   Remove a source by name
 
 ```bash
 # Add a source (name derived from directory)
-md source add -s ~/docs
+mdq source add -s ~/docs
 
 # Add with description
-md source add -s ~/docs -d "Documentation"
+mdq source add -s ~/docs -d "Documentation"
 
 # Add with explicit name
-md source add -s kb:~/docs -d "Knowledge base"
+mdq source add -s kb:~/docs -d "Knowledge base"
 
 # List registered sources
-md source list
+mdq source list
 
 # Remove a source
-md source remove kb
+mdq source remove kb
 ```
 
 **Output (list):**
@@ -234,18 +234,18 @@ docs  /Users/me/docs    Documentation
 kb    /Users/me/kb      Knowledge base
 ```
 
-### md mcp
+### mdq mcp
 
 Launch an MCP server for AI assistant integration.
 
 ```
-md mcp [sources...] [options]
+mdq mcp [sources...] [options]
 ```
 
 **Source Resolution:**
 
 1. If CLI sources are provided, use those (ignores registered sources)
-2. If no CLI sources, use registered sources from `md source add`
+2. If no CLI sources, use registered sources from `mdq source add`
 3. If no registered sources, show helpful error
 
 **Source Formats (CLI):**
@@ -272,32 +272,32 @@ md mcp [sources...] [options]
 | `--http` | Enable HTTP transport |
 | `--port <number>` | Port to bind (default: 3000) |
 | `--host <string>` | Host to bind (default: 127.0.0.1) |
-| `--api-key <string>` | API key (or set MD_MCP_API_KEY) |
+| `--api-key <string>` | API key (or set MDQ_MCP_API_KEY) |
 | `--no-auth` | Disable authentication (testing only) |
 
 **Examples:**
 
 ```bash
 # Use registered sources (recommended)
-md source add -s ~/docs -d "Documentation"
-md mcp
+mdq source add -s ~/docs -d "Documentation"
+mdq mcp
 
 # CLI override with descriptions
-md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # HTTP mode
-export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http -s ~/docs -d "Documentation"
+export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq mcp --http -s ~/docs -d "Documentation"
 ```
 
 **Startup (stderr):**
 
 ```
-md mcp: serving 2 sources
+mdq mcp: serving 2 sources
   - notes: /Users/me/notes (Personal journal)
   - wiki: /Users/me/wiki (Team docs)
-md mcp: Meilisearch connected
-md mcp: MCP server running on stdio
+mdq mcp: Meilisearch connected
+mdq mcp: MCP server running on stdio
 ```
 
 See [mcp.md](mcp.md) for full MCP tool specifications.

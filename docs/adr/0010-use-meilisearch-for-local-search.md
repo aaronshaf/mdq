@@ -38,9 +38,9 @@ Use **Meilisearch** as an external search engine that users run locally.
 # User runs Meilisearch
 docker run -d -p 7700:7700 getmeili/meilisearch:latest
 
-# md indexes and searches
-md search index
-md search "authentication"
+# mdq indexes and searches
+mdq search index
+mdq search "authentication"
 ```
 
 ## Rationale
@@ -87,7 +87,7 @@ md search "authentication"
 ### Mitigations
 
 - Provide clear setup instructions (Docker one-liner)
-- `md search status` shows connection status and helps diagnose issues
+- `mdq search status` shows connection status and helps diagnose issues
 - Clear error messages when Meilisearch is not running
 
 ## Implementation Notes
@@ -133,4 +133,4 @@ export MEILISEARCH_API_KEY="your-key"  # optional
 - [Meilisearch Documentation](https://www.meilisearch.com/docs)
 - [Meilisearch vs Typesense Comparison](https://www.meilisearch.com/blog/typesense-review)
 - [Meilisearch JavaScript SDK](https://github.com/meilisearch/meilisearch-js)
-- [PRD: md search](../prd/search.md)
+- [PRD: mdq search](../prd/search.md)

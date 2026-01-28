@@ -19,8 +19,8 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 
 	if (!mcpSource) {
 		console.error('Error: Source path is required');
-		console.error('Usage: md source add -s <path> [-d <description>]');
-		console.error('       md source add -s name:path [-d <description>]');
+		console.error('Usage: mdq source add -s <path> [-d <description>]');
+		console.error('       mdq source add -s name:path [-d <description>]');
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
@@ -78,7 +78,7 @@ export function runSourceListCommand(): void {
 		console.log('No sources registered.');
 		console.log('');
 		console.log('Add sources with:');
-		console.log('  md source add <path> [--name <name>] [--desc <description>]');
+		console.log('  mdq source add <path> [--name <name>] [--desc <description>]');
 		return;
 	}
 
@@ -102,7 +102,7 @@ export function runSourceRemoveCommand(args: SourceCommandArgs): void {
 
 	if (!name) {
 		console.error('Error: Source name is required');
-		console.error('Usage: md source remove <name>');
+		console.error('Usage: mdq source remove <name>');
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
@@ -131,9 +131,9 @@ export function runSourceCommand(args: SourceCommandArgs): void {
 			console.error(`Unknown source subcommand: ${args.subcommand}`);
 			console.error('');
 			console.error('Available subcommands:');
-			console.error('  md source add <path>     Add a source');
-			console.error('  md source list           List all sources');
-			console.error('  md source remove <name>  Remove a source');
+			console.error('  mdq source add <path>     Add a source');
+			console.error('  mdq source list           List all sources');
+			console.error('  mdq source remove <name>  Remove a source');
 			process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 }

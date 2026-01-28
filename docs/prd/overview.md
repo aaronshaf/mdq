@@ -1,8 +1,8 @@
-# md - Markdown Search CLI
+# mdq - Markdown Search CLI
 
 ## Overview
 
-`md` is a CLI tool for indexing and searching local markdown files. It provides fast, typo-tolerant search across markdown content via Meilisearch, with optional vector embeddings for semantic search, plus MCP server integration for AI assistants.
+`mdq` is a CLI tool for indexing and searching local markdown files. It provides fast, typo-tolerant search across markdown content via Meilisearch, with optional vector embeddings for semantic search, plus MCP server integration for AI assistants.
 
 ## Goals
 
@@ -37,18 +37,18 @@
 
 | Command | Description |
 |---------|-------------|
-| `md status` | Check if Meilisearch is running |
-| `md search <query>` | Search indexed content |
-| `md search status` | Check index status |
-| `md index` | Build/rebuild the search index |
-| `md embed` | Generate embeddings for semantic search |
-| `md embed status` | Check LLM and embedding connectivity |
-| `md source` | Manage registered sources for MCP server |
-| `md mcp [sources...]` | Start MCP server for AI assistants |
+| `mdq status` | Check if Meilisearch is running |
+| `mdq search <query>` | Search indexed content |
+| `mdq search status` | Check index status |
+| `mdq index` | Build/rebuild the search index |
+| `mdq embed` | Generate embeddings for semantic search |
+| `mdq embed status` | Check LLM and embedding connectivity |
+| `mdq source` | Manage registered sources for MCP server |
+| `mdq mcp [sources...]` | Start MCP server for AI assistants |
 
 ## Frontmatter Support
 
-md works with any YAML frontmatter. These fields are recognized when present:
+mdq works with any YAML frontmatter. These fields are recognized when present:
 
 | Field | Type | Usage |
 |-------|------|-------|
@@ -77,7 +77,7 @@ Minimal configuration required. Most settings via environment variables:
 
 | File | Description |
 |------|-------------|
-| `~/.config/md/sources.json` | Registered sources for MCP server |
+| `~/.config/mdq/sources.json` | Registered sources for MCP server |
 
 The `XDG_CONFIG_HOME` environment variable is respected for config file location.
 
@@ -86,14 +86,14 @@ The `XDG_CONFIG_HOME` environment variable is respected for config file location
 ### Index and Search
 
 ```
-$ md index --path ~/docs/wiki
+$ mdq index --path ~/docs/wiki
 Indexing markdown files...
   Found 142 files
   Connecting to Meilisearch...
 
 Indexed 142 documents in 1.2s
 
-$ md search "authentication"
+$ mdq search "authentication"
 Found 3 results for "authentication"
 
 1. Authentication Guide
@@ -108,7 +108,7 @@ Found 3 results for "authentication"
 ### Add Semantic Search
 
 ```
-$ md embed --path ~/docs/wiki --verbose
+$ mdq embed --path ~/docs/wiki --verbose
 Processing 142 documents...
   [1/142] Authentication Guide - chunking and embedding...
   [1/142] Authentication Guide - generating embedding...
@@ -121,17 +121,17 @@ Processed 142 documents in 5m 23s
 
 ```bash
 # Register sources once
-md source add -s ~/docs -d "Documentation"
-md source add -s ~/wiki -d "Team wiki"
+mdq source add -s ~/docs -d "Documentation"
+mdq source add -s ~/wiki -d "Team wiki"
 
 # Add to Claude Code (uses registered sources)
-claude mcp add kb -- md mcp
+claude mcp add kb -- mdq mcp
 
 # Or configure directly in ~/.claude/mcp.json
 {
   "mcpServers": {
     "my-docs": {
-      "command": "md",
+      "command": "mdq",
       "args": ["mcp"]
     }
   }

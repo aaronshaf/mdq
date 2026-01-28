@@ -277,7 +277,7 @@ export class Embedder {
 		if (status.documentCount === undefined || status.documentCount === 0) {
 			return {
 				ok: false,
-				message: `Index "${indexName}" is empty or does not exist. Run "md index --path ${dirPath}" first.`,
+				message: `Index "${indexName}" is empty or does not exist. Run "mdq index --path ${dirPath}" first.`,
 			};
 		}
 

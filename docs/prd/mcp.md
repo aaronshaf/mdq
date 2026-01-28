@@ -1,4 +1,4 @@
-# md mcp - Product Requirements Document
+# mdq mcp - Product Requirements Document
 
 ## Problem Statement
 
@@ -6,7 +6,7 @@ Users working with AI assistants (Claude Code, Claude Desktop, VS Code Copilot) 
 
 1. **Copy/paste content** - Manual, breaks flow, limited context window
 2. **Ask AI to read files** - AI must guess paths, no search capability, slow for large collections
-3. **Switch to terminal** - Run `md search`, copy results back, context switching overhead
+3. **Switch to terminal** - Run `mdq search`, copy results back, context switching overhead
 
 Users need a way to expose their indexed markdown content directly to AI assistants via the Model Context Protocol (MCP), enabling seamless documentation lookup within their existing AI workflows.
 
@@ -17,9 +17,9 @@ Users need a way to expose their indexed markdown content directly to AI assista
 | Seamless AI integration | Works with any MCP client | Claude Code, Desktop, VS Code |
 | Fast search | Query response time | < 100ms (leverages Meilisearch) |
 | Zero config for users | Setup complexity | Single command to start |
-| Full search parity | Feature coverage | All `md search` filters supported |
+| Full search parity | Feature coverage | All `mdq search` filters supported |
 | Multiple sources | Index multiple directories | Supported with descriptions |
-| Registered sources | Persist source config | Store in `~/.config/md/sources.json` |
+| Registered sources | Persist source config | Store in `~/.config/mdq/sources.json` |
 | Remote access | HTTP transport | Supported for Claude web UI |
 
 ## Non-Goals
@@ -30,11 +30,11 @@ Users need a way to expose their indexed markdown content directly to AI assista
 
 ## Solution Overview
 
-`md mcp` command launches an MCP server over stdio or HTTP transport. The server exposes two tools (`search` and `read_page`) that allow MCP clients to query the local Meilisearch index and read file content.
+`mdq mcp` command launches an MCP server over stdio or HTTP transport. The server exposes two tools (`search` and `read_page`) that allow MCP clients to query the local Meilisearch index and read file content.
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   MCP Client    │────▶│     md mcp       │────▶│   Meilisearch   │
+│   MCP Client    │────▶│     mdq mcp      │────▶│   Meilisearch   │
 │ (Claude Code)   │stdio│  (MCP Server)    │     │  (localhost)    │
 └─────────────────┘  or └──────────────────┘     └─────────────────┘
                     HTTP        │
@@ -47,21 +47,21 @@ Users need a way to expose their indexed markdown content directly to AI assista
 
 ## Prerequisites
 
-1. **Meilisearch running** - Same requirement as `md search`
-2. **Index exists** - User must run `md index` first
+1. **Meilisearch running** - Same requirement as `mdq search`
+2. **Index exists** - User must run `mdq index` first
 
 ## Registered Sources
 
-Sources can be registered persistently using `md source` commands, eliminating the need to specify them on each `md mcp` invocation.
+Sources can be registered persistently using `mdq source` commands, eliminating the need to specify them on each `mdq mcp` invocation.
 
 ```bash
 # Register sources once
-md source add -s ~/docs -d "Documentation"
-md source add -s ~/wiki -d "Team wiki"
-md source list
+mdq source add -s ~/docs -d "Documentation"
+mdq source add -s ~/wiki -d "Team wiki"
+mdq source list
 
 # Start MCP server (uses registered sources)
-md mcp
+mdq mcp
 ```
 
 **Source resolution order:**
@@ -69,7 +69,7 @@ md mcp
 2. If no CLI sources → use registered sources
 3. If no registered sources → error with helpful message
 
-**Storage:** `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`)
+**Storage:** `~/.config/mdq/sources.json` (or `$XDG_CONFIG_HOME/mdq/sources.json`)
 
 ## Multiple Sources (CLI)
 
@@ -77,10 +77,10 @@ Sources can also be provided directly on the command line (overrides registered 
 
 ```bash
 # Multiple sources with descriptions
-md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # Explicit names to avoid collisions
-md mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
+mdq mcp -s work:~/work/docs -d "Work docs" -s personal:~/docs -d "Personal notes"
 ```
 
 **Name derivation:**
@@ -245,7 +245,7 @@ Read the full content of a specific file.
 For local MCP clients like Claude Code and Claude Desktop:
 
 ```bash
-md mcp -s ~/docs -d "Documentation"
+mdq mcp -s ~/docs -d "Documentation"
 ```
 
 ### HTTP
@@ -253,18 +253,18 @@ md mcp -s ~/docs -d "Documentation"
 For remote access from Claude web UI or other HTTP clients:
 
 ```bash
-export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http -s ~/docs -d "Documentation"
-md mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
+export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq mcp --http -s ~/docs -d "Documentation"
+mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
 **Configuration:**
 
 | Option | Environment | Default | Description |
 |--------|-------------|---------|-------------|
-| `--port` | `MD_MCP_PORT` | 3000 | Port to bind |
-| `--host` | `MD_MCP_HOST` | 127.0.0.1 | Host to bind |
-| `--api-key` | `MD_MCP_API_KEY` | (required) | Authentication key |
+| `--port` | `MDQ_MCP_PORT` | 3000 | Port to bind |
+| `--host` | `MDQ_MCP_HOST` | 127.0.0.1 | Host to bind |
+| `--api-key` | `MDQ_MCP_API_KEY` | (required) | Authentication key |
 | `--no-auth` | - | false | Disable auth (testing only) |
 
 **Exposing to internet:**
@@ -288,11 +288,11 @@ ngrok http 3000
 
 ```bash
 # Register sources first (one-time setup)
-md source add -s ~/notes -d "Personal journal"
-md source add -s ~/wiki -d "Team docs"
+mdq source add -s ~/notes -d "Personal journal"
+mdq source add -s ~/wiki -d "Team docs"
 
 # Add MCP server (uses registered sources)
-claude mcp add kb -- md mcp
+claude mcp add kb -- mdq mcp
 ```
 
 Or add to `~/.claude/mcp.json`:
@@ -301,7 +301,7 @@ Or add to `~/.claude/mcp.json`:
 {
   "mcpServers": {
     "kb": {
-      "command": "md",
+      "command": "mdq",
       "args": ["mcp"]
     }
   }
@@ -323,7 +323,7 @@ Edit the Claude Desktop config file:
   "mcpServers": {
     "kb": {
       "command": "/Users/YOU/.bun/bin/bun",
-      "args": ["run", "/Users/YOU/.bun/bin/md", "mcp"]
+      "args": ["run", "/Users/YOU/.bun/bin/mdq", "mcp"]
     }
   }
 }
@@ -343,14 +343,14 @@ Edit the Claude Desktop config file:
 
 **Auto-generate config:**
 ```bash
-md mcp --print-config
+mdq mcp --print-config
 ```
 
 This outputs the correct JSON for your installation method (bun or node) with full paths.
 
 **Important:** Claude Desktop doesn't inherit your shell PATH.
 
-Note: Register sources first with `md source add -s <path> -d <description>`.
+Note: Register sources first with `mdq source add -s <path> -d <description>`.
 
 ### VS Code (Copilot)
 
@@ -361,7 +361,7 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "kb": {
       "command": "md",
-      "args": ["mcp", "${workspaceFolder}/docs"]
+      "args": ["mcp"]
     }
   }
 }
@@ -399,7 +399,7 @@ Return MCP error responses:
 src/
 ├── lib/
 │   ├── config/
-│   │   └── sources.ts         # Registered sources config (~/.config/md/sources.json)
+│   │   └── sources.ts         # Registered sources config (~/.config/mdq/sources.json)
 │   ├── path-utils.ts          # Shared path utilities (tilde expansion)
 │   └── mcp/
 │       ├── index.ts           # MCP module exports
@@ -411,8 +411,8 @@ src/
 │       └── types.ts           # MCP-specific types
 └── cli/
     └── commands/
-        ├── mcp.ts             # md mcp command
-        └── source.ts          # md source command
+        ├── mcp.ts             # mdq mcp command
+        └── source.ts          # mdq source command
 ```
 
 ### Dependencies
@@ -431,10 +431,10 @@ src/
 2. **HTTP mode**: Requires API key authentication (unless `--no-auth`)
 3. **Read-only**: No tools modify files
 4. **Path validation**: `read_page` validates paths are within indexed directories
-5. **CORS**: Configurable via `MD_MCP_CORS_ORIGIN` (default: `https://claude.ai`)
+5. **CORS**: Configurable via `MDQ_MCP_CORS_ORIGIN` (default: `https://claude.ai`)
 
 ## References
 
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification/2025-11-25)
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [md search PRD](./search.md)
+- [mdq search PRD](./search.md)

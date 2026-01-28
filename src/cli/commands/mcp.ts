@@ -18,16 +18,18 @@ export async function runMcpCommand(
 	// Check Meilisearch health before proceeding
 	const health = await client.checkHealth();
 	if (!health.healthy) {
-		console.error(`[md] Error: ${health.message}`);
+		console.error(`[mdq] Error: ${health.message}`);
 		process.exit(EXIT_CODES.CONNECTION_ERROR);
 	}
-	console.error(`[md] ${health.message}`);
+	console.error(`[mdq] ${health.message}`);
 
 	// If HTTP mode enabled, validate API key and route to HTTP server
 	if (httpOptions?.enabled) {
 		if (!httpOptions.noAuth) {
 			if (!httpOptions.apiKey) {
-				console.error('Error: API key required for HTTP mode. Set MD_MCP_API_KEY or use --api-key');
+				console.error(
+					'Error: API key required for HTTP mode. Set MDQ_MCP_API_KEY or use --api-key',
+				);
 				console.error('Use --no-auth to disable authentication (for testing only)');
 				process.exit(EXIT_CODES.INVALID_ARGS);
 			}
@@ -49,7 +51,7 @@ export async function runMcpCommand(
 	// Otherwise, use stdio mode (default behavior)
 
 	// Auto-index all source directories in parallel
-	console.error(`[md] Indexing ${sources.length} source(s)...`);
+	console.error(`[mdq] Indexing ${sources.length} source(s)...`);
 	const indexResults = await Promise.allSettled(
 		sources.map(async (source) => {
 			const result = await indexDirectory(source.path, client);
@@ -61,11 +63,11 @@ export async function runMcpCommand(
 	for (const outcome of indexResults) {
 		if (outcome.status === 'fulfilled') {
 			const { source, result } = outcome.value;
-			console.error(`[md] Indexed ${result.indexed} documents from ${source.name}`);
+			console.error(`[mdq] Indexed ${result.indexed} documents from ${source.name}`);
 		} else {
 			const reason =
 				outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-			console.error(`[md] Warning: Indexing failed: ${reason}`);
+			console.error(`[mdq] Warning: Indexing failed: ${reason}`);
 		}
 	}
 
@@ -73,7 +75,7 @@ export async function runMcpCommand(
 
 	// Graceful shutdown on SIGINT/SIGTERM
 	const shutdown = async () => {
-		console.error('\n[md] Shutting down...');
+		console.error('\n[mdq] Shutting down...');
 		await server.close();
 		process.exit(0);
 	};

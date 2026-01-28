@@ -22,43 +22,43 @@ docker run -d -p 7700:7700 \
 ### 3. Index and Search
 
 ```bash
-md index --path ~/docs
-md search "query"
+mdq index --path ~/docs
+mdq search "query"
 ```
 
 ## Commands
 
 ```
-md status              Check if Meilisearch is running
-md search <query>      Search indexed content
-md index               Build/rebuild index
-md embed               Generate embeddings for semantic search
-md source              Manage registered sources for MCP server
-md mcp [sources...]    Start MCP server
+mdq status              Check if Meilisearch is running
+mdq search <query>      Search indexed content
+mdq index               Build/rebuild index
+mdq embed               Generate embeddings for semantic search
+mdq source              Manage registered sources for MCP server
+mdq mcp [sources...]    Start MCP server
 ```
 
-Run `md <command> --help` for command-specific options.
+Run `mdq <command> --help` for command-specific options.
 
 ## MCP Server
 
 ```bash
 # Register sources (one-time setup)
-md source add -s ~/docs -d "Documentation"
-md source add -s ~/wiki -d "Team wiki"
-md source list
+mdq source add -s ~/docs -d "Documentation"
+mdq source add -s ~/wiki -d "Team wiki"
+mdq source list
 
 # Start MCP server (uses registered sources)
-md mcp
+mdq mcp
 
 # Or specify sources directly (overrides registered)
-md mcp -s ~/docs -d "Documentation"
+mdq mcp -s ~/docs -d "Documentation"
 
 # HTTP mode for remote access (Claude web UI)
-export MD_MCP_API_KEY="$(openssl rand -hex 32)"
-md mcp --http
+export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq mcp --http
 
 # Add to Claude Code
-claude mcp add kb -- md mcp
+claude mcp add kb -- mdq mcp
 ```
 
 ## Documentation

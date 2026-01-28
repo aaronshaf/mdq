@@ -11,28 +11,24 @@ import { parseSourceArg } from '../../lib/mcp/sources.js';
 export interface SourceCommandArgs {
 	subcommand: string;
 	positional: string[];
-	options: {
-		name?: string;
-		desc?: string;
-	};
+	mcpSources: Array<{ source: string; desc?: string }>;
 }
 
 export function runSourceAddCommand(args: SourceCommandArgs): void {
-	const sourceArg = args.positional[0];
+	const mcpSource = args.mcpSources[0];
 
-	if (!sourceArg) {
-		console.error('Error: Path is required');
-		console.error('Usage: md source add <path> [-d <description>]');
-		console.error('       md source add name:path [-d <description>]');
+	if (!mcpSource) {
+		console.error('Error: Source path is required');
+		console.error('Usage: md source add -s <path> [-d <description>]');
+		console.error('       md source add -s name:path [-d <description>]');
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
-	// Parse the source argument (handles name:path and path|description syntax)
-	const parsed = parseSourceArg(sourceArg);
+	// Parse the source argument (handles name:path syntax)
+	const parsed = parseSourceArg(mcpSource.source);
 
-	// CLI flags override inline syntax
-	const name = args.options.name?.toLowerCase() ?? parsed.name;
-	const description = args.options.desc ?? parsed.description;
+	const name = parsed.name;
+	const description = mcpSource.desc ?? parsed.description;
 	const resolvedPath = parsed.path;
 
 	// Validate name

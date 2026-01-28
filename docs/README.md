@@ -244,8 +244,8 @@ Register sources for the MCP server, eliminating the need to specify them on eac
 ### Commands
 
 ```bash
-md source add <path> [-d <description>]
-md source add name:path [-d <description>]
+md source add -s <path> [-d <description>]
+md source add -s name:path [-d <description>]
 md source list
 md source remove <name>
 ```
@@ -254,8 +254,8 @@ md source remove <name>
 
 ```bash
 # Register sources
-md source add ~/docs -d "Documentation"
-md source add kb:~/wiki -d "Team knowledge base"
+md source add -s ~/docs -d "Documentation"
+md source add -s kb:~/wiki -d "Team knowledge base"
 
 # List registered sources
 md source list

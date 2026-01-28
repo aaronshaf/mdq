@@ -404,12 +404,13 @@ EXAMPLES:
 			console.log(`md source - Manage registered sources for MCP server
 
 USAGE:
-  md source add <path> [-d <desc>]     Add a source directory
-  md source add name:path [-d <desc>]  Add with explicit name
-  md source list                       List all registered sources
-  md source remove <name>              Remove a source by name
+  md source add -s <path> [-d <desc>]       Add a source directory
+  md source add -s name:path [-d <desc>]    Add with explicit name
+  md source list                            List all registered sources
+  md source remove <name>                   Remove a source by name
 
 OPTIONS (for add):
+  -s <path>            Source path (required)
   -d <description>     Description of the source
 
 NOTES:
@@ -417,9 +418,9 @@ NOTES:
   CLI sources are provided. Sources are stored in ~/.config/md/sources.json
 
 EXAMPLES:
-  md source add ~/docs
-  md source add ~/docs -d "Documentation"
-  md source add kb:~/docs -d "Knowledge base"
+  md source add -s ~/docs
+  md source add -s ~/docs -d "Documentation"
+  md source add -s kb:~/docs -d "Knowledge base"
   md source list
   md source remove kb
 `);
@@ -600,10 +601,7 @@ export async function run(args: string[]): Promise<void> {
 				const sourceArgs: SourceCommandArgs = {
 					subcommand: parsed.subcommand ?? '',
 					positional: parsed.positional,
-					options: {
-						name: parsed.options.name,
-						desc: parsed.options.description,
-					},
+					mcpSources: parsed.mcpSources,
 				};
 				runSourceCommand(sourceArgs);
 				break;

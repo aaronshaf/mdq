@@ -193,29 +193,30 @@ Processed 142 documents
 Manage registered sources for the MCP server. Sources are stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`).
 
 ```
-md source add <path> [-d <desc>]     Add a source directory
-md source add name:path [-d <desc>]  Add with explicit name
-md source list                       List all registered sources
-md source remove <name>              Remove a source by name
+md source add -s <path> [-d <desc>]       Add a source directory
+md source add -s name:path [-d <desc>]    Add with explicit name
+md source list                            List all registered sources
+md source remove <name>                   Remove a source by name
 ```
 
 **Options (for add):**
 
 | Option | Description |
 |--------|-------------|
+| `-s <path>` | Source path (required) |
 | `-d <description>` | Description of the source |
 
 **Examples:**
 
 ```bash
 # Add a source (name derived from directory)
-md source add ~/docs
+md source add -s ~/docs
 
 # Add with description
-md source add ~/docs -d "Documentation"
+md source add -s ~/docs -d "Documentation"
 
 # Add with explicit name
-md source add kb:~/docs -d "Knowledge base"
+md source add -s kb:~/docs -d "Knowledge base"
 
 # List registered sources
 md source list

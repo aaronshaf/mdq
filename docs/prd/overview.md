@@ -121,8 +121,8 @@ Processed 142 documents in 5m 23s
 
 ```bash
 # Register sources once
-md source add ~/docs --desc "Documentation"
-md source add ~/wiki --desc "Team wiki"
+md source add -s ~/docs -d "Documentation"
+md source add -s ~/wiki -d "Team wiki"
 
 # Add to Claude Code (uses registered sources)
 claude mcp add kb -- md mcp

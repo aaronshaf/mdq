@@ -43,16 +43,15 @@ Run `md <command> --help` for command-specific options.
 
 ```bash
 # Register sources (one-time setup)
-md source add ~/docs --desc "Documentation"
-md source add ~/wiki --desc "Team wiki"
+md source add -s ~/docs -d "Documentation"
+md source add -s ~/wiki -d "Team wiki"
 md source list
 
 # Start MCP server (uses registered sources)
 md mcp
 
 # Or specify sources directly (overrides registered)
-md mcp ~/docs
-md mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
+md mcp -s ~/docs -d "Documentation"
 
 # HTTP mode for remote access (Claude web UI)
 export MD_MCP_API_KEY="$(openssl rand -hex 32)"

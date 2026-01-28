@@ -263,6 +263,7 @@ md mcp [sources...] [options]
 |--------|-------------|
 | `-s, --source <path>` | Add source directory |
 | `-d, --desc <text>` | Description for preceding source |
+| `--print-config` | Output Claude Desktop JSON config and exit |
 
 **HTTP Mode Options:**
 

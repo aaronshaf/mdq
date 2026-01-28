@@ -53,6 +53,7 @@ interface ParsedArgs {
 		// HTTP mode options
 		http: boolean;
 		noAuth: boolean;
+		printConfig: boolean;
 		port?: number;
 		host?: string;
 		apiKey?: string;
@@ -71,7 +72,8 @@ type BooleanFlag =
 	| 'reset'
 	| 'dryRun'
 	| 'http'
-	| 'noAuth';
+	| 'noAuth'
+	| 'printConfig';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -108,6 +110,7 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--dry-run': 'dryRun',
 	'--http': 'http',
 	'--no-auth': 'noAuth',
+	'--print-config': 'printConfig',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -244,6 +247,7 @@ function parseArgs(args: string[]): ParseResult {
 			dryRun: false,
 			http: false,
 			noAuth: false,
+			printConfig: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -441,6 +445,7 @@ SOURCE FORMATS:
 OPTIONS:
   -s, --source <path>      Add a source directory (can use name:path format)
   -d, --desc <text>        Description for the preceding source
+  --print-config           Output Claude Desktop JSON config and exit
 
 HTTP MODE OPTIONS:
   --http                   Enable HTTP transport (for remote access)
@@ -502,6 +507,47 @@ EXAMPLES:
 
 function printVersion(): void {
 	console.log(`md version ${VERSION}`);
+}
+
+interface McpServerConfig {
+	command: string;
+	args: string[];
+}
+
+interface McpConfig {
+	mcpServers: {
+		kb: McpServerConfig;
+	};
+}
+
+function generateMcpConfig(): McpConfig {
+	const execPath = process.execPath; // e.g., /Users/you/.bun/bin/bun or /usr/local/bin/node
+	const scriptPath = process.argv[1] ?? ''; // e.g., /Users/you/.bun/bin/md
+
+	// Detect if running via bun
+	const isBun = execPath.includes('bun') || process.versions.bun !== undefined;
+
+	if (isBun) {
+		// Bun installation: use bun as command with run + script path
+		return {
+			mcpServers: {
+				kb: {
+					command: execPath,
+					args: ['run', scriptPath, 'mcp'],
+				},
+			},
+		};
+	}
+
+	// Node installation: use node as command with script path
+	return {
+		mcpServers: {
+			kb: {
+				command: execPath,
+				args: [scriptPath, 'mcp'],
+			},
+		},
+	};
 }
 
 function getOutputFormat(options: ParsedArgs['options']): 'human' | 'json' | 'xml' {
@@ -608,6 +654,13 @@ export async function run(args: string[]): Promise<void> {
 			}
 
 			case 'mcp': {
+				// Handle --print-config: output Claude Desktop JSON config
+				if (parsed.options.printConfig) {
+					const config = generateMcpConfig();
+					console.log(JSON.stringify(config, null, 2));
+					process.exit(EXIT_CODES.SUCCESS);
+				}
+
 				// Build source args from -s/-d flags and positional args
 				// Flag-based sources: -s path -d "description"
 				// Positional sources: path or name:path or "name:path|description"

@@ -363,7 +363,14 @@ Edit the Claude Desktop config file:
 }
 ```
 
-**Important:** Claude Desktop doesn't inherit your shell PATH. Run `which bun` and `which md` to find the full paths for your system.
+**Auto-generate config:**
+```bash
+md mcp --print-config
+```
+
+This outputs the correct JSON for your installation method (bun or node) with full paths.
+
+**Important:** Claude Desktop doesn't inherit your shell PATH.
 
 Note: Register sources first with `md source add -s <path> -d <description>`.
 

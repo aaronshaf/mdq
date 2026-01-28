@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import {
 	type SourceConfig,
 	addSource,
@@ -7,7 +6,7 @@ import {
 	removeSource,
 } from '../../lib/config/sources.js';
 import { EXIT_CODES } from '../../lib/errors.js';
-import { expandTilde } from '../../lib/path-utils.js';
+import { parseSourceArg } from '../../lib/mcp/sources.js';
 
 export interface SourceCommandArgs {
 	subcommand: string;
@@ -18,35 +17,29 @@ export interface SourceCommandArgs {
 	};
 }
 
-/**
- * Validate a source name.
- * Returns an error message if invalid, undefined if valid.
- */
-function validateSourceName(name: string): string | undefined {
-	if (!name || name.trim().length === 0) {
-		return 'Source name cannot be empty';
-	}
-	if (name.includes(':')) {
-		return 'Source name cannot contain colons (conflicts with name:path syntax)';
-	}
-	if (name.includes('|')) {
-		return 'Source name cannot contain pipe characters (conflicts with description syntax)';
-	}
-	return undefined;
-}
-
 export function runSourceAddCommand(args: SourceCommandArgs): void {
-	const sourcePath = args.positional[0];
+	const sourceArg = args.positional[0];
 
-	if (!sourcePath) {
+	if (!sourceArg) {
 		console.error('Error: Path is required');
-		console.error('Usage: md source add <path> [--name <name>] [--desc <description>]');
+		console.error('Usage: md source add <path> [--desc <description>]');
+		console.error('       md source add name:path [--desc <description>]');
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
-	// Expand and resolve the path
-	const expandedPath = expandTilde(sourcePath);
-	const resolvedPath = path.resolve(expandedPath);
+	// Parse the source argument (handles name:path and path|description syntax)
+	const parsed = parseSourceArg(sourceArg);
+
+	// CLI flags override inline syntax
+	const name = args.options.name?.toLowerCase() ?? parsed.name;
+	const description = args.options.desc ?? parsed.description;
+	const resolvedPath = parsed.path;
+
+	// Validate name
+	if (!name || name.trim().length === 0) {
+		console.error('Error: Source name cannot be empty');
+		process.exit(EXIT_CODES.INVALID_ARGS);
+	}
 
 	// Validate path exists
 	if (!fs.existsSync(resolvedPath)) {
@@ -61,23 +54,13 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 		process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 
-	// Derive name from directory basename if not provided
-	const name = args.options.name?.toLowerCase() ?? path.basename(resolvedPath).toLowerCase();
-
-	// Validate name
-	const nameError = validateSourceName(name);
-	if (nameError) {
-		console.error(`Error: ${nameError}`);
-		process.exit(EXIT_CODES.INVALID_ARGS);
-	}
-
 	const source: SourceConfig = {
 		name,
 		path: resolvedPath,
 	};
 
-	if (args.options.desc) {
-		source.description = args.options.desc;
+	if (description) {
+		source.description = description;
 	}
 
 	try {

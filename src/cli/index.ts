@@ -403,12 +403,12 @@ EXAMPLES:
 			console.log(`md source - Manage registered sources for MCP server
 
 USAGE:
-  md source add <path> [options]   Add a source directory
-  md source list                   List all registered sources
-  md source remove <name>          Remove a source by name
+  md source add <path> [options]     Add a source directory
+  md source add name:path [options]  Add with explicit name
+  md source list                     List all registered sources
+  md source remove <name>            Remove a source by name
 
 OPTIONS (for add):
-  --name <name>            Explicit name (default: directory basename)
   --desc <description>     Description of the source
 
 NOTES:
@@ -416,10 +416,11 @@ NOTES:
   CLI sources are provided. Sources are stored in ~/.config/md/sources.json
 
 EXAMPLES:
-  md source add ~/inst/confluence/ENG --desc "Engineering knowledge base"
-  md source add ~/inst/confluence/ENGWIKI --name engwiki --desc "Engineering Wiki"
+  md source add ~/docs
+  md source add ~/docs --desc "Documentation"
+  md source add kb:~/docs --desc "Knowledge base"
   md source list
-  md source remove engwiki
+  md source remove kb
 `);
 			break;
 

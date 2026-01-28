@@ -244,7 +244,8 @@ Register sources for the MCP server, eliminating the need to specify them on eac
 ### Commands
 
 ```bash
-md source add <path> [--name <name>] [--desc <description>]
+md source add <path> [--desc <description>]
+md source add name:path [--desc <description>]
 md source list
 md source remove <name>
 ```
@@ -254,20 +255,20 @@ md source remove <name>
 ```bash
 # Register sources
 md source add ~/docs --desc "Documentation"
-md source add ~/wiki --name team-wiki --desc "Team knowledge base"
+md source add kb:~/wiki --desc "Team knowledge base"
 
 # List registered sources
 md source list
 
 # Remove a source
-md source remove team-wiki
+md source remove kb
 ```
 
 ### Notes
 
 - Sources stored in `~/.config/md/sources.json` (or `$XDG_CONFIG_HOME/md/sources.json`)
 - Name defaults to directory basename (lowercase)
-- Names cannot contain `:` or `|` (reserved syntax)
+- Use `name:path` syntax for explicit names
 - CLI sources to `md mcp` override registered sources
 
 ## MCP Server

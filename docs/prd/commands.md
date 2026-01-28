@@ -9,7 +9,7 @@
 | `--verbose` | Enable verbose output |
 | `--json` | Output as JSON |
 | `--xml` | Output as XML |
-| `--path <dir>` | Target directory (default: current directory) |
+| `--path <dir>` | Target directory (default: all registered sources) |
 
 ## Commands
 
@@ -42,10 +42,15 @@ mdq search <query> [options]
 mdq search status    Check index status
 ```
 
+**Behavior:**
+- By default, searches **all registered sources** (from `mdq source add`)
+- Use `--path <dir>` to search a specific directory instead
+
 **Options:**
 
 | Option | Description |
 |--------|-------------|
+| `--path <dir>` | Search specific directory (overrides registered sources) |
 | `--labels <label>` | Filter by labels (comma-separated, OR logic) |
 | `--author <email>` | Filter by author email |
 | `--created-after <date>` | Documents created after date (YYYY-MM-DD) |
@@ -61,19 +66,19 @@ mdq search status    Check index status
 **Examples:**
 
 ```bash
-# Basic search
+# Search all registered sources (default)
 mdq search "authentication"
 
 # Search with typo (still finds "authentication")
 mdq search "authentcation"
 
-# Filter by label
+# Filter by label across all sources
 mdq search "api" --labels documentation
 
-# Date filtering
+# Date filtering across all sources
 mdq search "api" --updated-within 30d
 
-# Find stale content
+# Find stale content across all sources
 mdq search "" --stale 90d --labels documentation
 
 # Browse all docs with a label
@@ -85,7 +90,7 @@ mdq search "security" --sort -updated_at --limit 10
 # JSON output for scripting
 mdq search "error handling" --json
 
-# Search in specific directory
+# Search in specific directory only
 mdq search "setup" --path ~/docs/wiki
 ```
 
@@ -111,29 +116,42 @@ Build the search index. Always performs a full reindex.
 mdq index [options]
 ```
 
+**Behavior:**
+- By default, indexes **all registered sources** (from `mdq source add`)
+- Use `--path <dir>` to index a specific directory instead
+- **Preserves embeddings**: If a document hasn't changed (same `updated_at`), its `embedded_at` timestamp is preserved, avoiding unnecessary re-embedding
+
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--path <dir>` | Directory to index (default: current directory) |
+| `--path <dir>` | Index specific directory (overrides registered sources) |
 | `--verbose` | Show detailed progress |
 
 **Examples:**
 
 ```bash
+# Index all registered sources (default)
 mdq index
+
+# Index all registered sources with verbose output
+mdq index --verbose
+
+# Index specific directory only
 mdq index --path ~/docs/wiki
+
+# Index specific directory with verbose output
 mdq index --path ~/docs --verbose
 ```
 
 **Output:**
 
 ```
-Indexing markdown files...
-  Found 142 files
-  Connecting to Meilisearch...
-
-Indexed 142 documents in 1.2s
+Indexing ar (/Users/me/confluence/AR)...
+Indexed 85/85 files
+Indexing ce (/Users/me/confluence/CE)...
+Indexed 1004/1004 files
+...
 ```
 
 **Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdignore` are automatically excluded.
@@ -147,11 +165,16 @@ mdq embed [options]
 mdq embed status    Check LLM and Meilisearch connectivity
 ```
 
+**Behavior:**
+- By default, embeds **all registered sources** (from `mdq source add`)
+- Use `--path <dir>` to embed a specific directory instead
+- Only processes documents where `updated_at > embedded_at` (unless `--reset`)
+
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--path <dir>` | Directory to process (default: current directory) |
+| `--path <dir>` | Process specific directory (overrides registered sources) |
 | `--batch-size <n>` | Max documents to process per run |
 | `--time-limit <min>` | Max time to run in minutes |
 | `--reset` | Reset and reprocess all documents |
@@ -161,17 +184,20 @@ mdq embed status    Check LLM and Meilisearch connectivity
 **Examples:**
 
 ```bash
-# Process all documents
+# Process all registered sources (default)
+mdq embed --verbose
+
+# Process in batches across all sources
+mdq embed --batch-size 50 --verbose
+
+# Time-limited processing across all sources
+mdq embed --time-limit 10 --verbose
+
+# Reset and reprocess all sources
+mdq embed --reset --verbose
+
+# Process specific directory only
 mdq embed --path ~/docs --verbose
-
-# Process in batches
-mdq embed --path ~/docs --batch-size 50 --verbose
-
-# Time-limited processing
-mdq embed --path ~/docs --time-limit 10 --verbose
-
-# Reset and reprocess
-mdq embed --path ~/docs --reset --verbose
 
 # Check status
 mdq embed status

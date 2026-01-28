@@ -1,13 +1,15 @@
 import fs from 'node:fs';
-import { listSources as listRegisteredSources } from '../lib/config/sources.js';
+import { type SourceConfig, listSources as listRegisteredSources } from '../lib/config/sources.js';
 import { EXIT_CODES, type MdError, getExitCode } from '../lib/errors.js';
 import { getFormatter } from '../lib/formatters.js';
 import { type Source, parseSources } from '../lib/mcp/sources.js';
+import type { SearchResponse } from '../lib/search/index.js';
 import { runEmbedCommand, runEmbedStatusCommand } from './commands/embed.js';
 import { runMcpCommand } from './commands/mcp.js';
 import {
 	runSearchCommand,
 	runSearchIndexCommand,
+	runSearchMultipleCommand,
 	runSearchStatusCommand,
 	runStatusCommand,
 } from './commands/search.js';
@@ -330,7 +332,7 @@ USAGE:
   mdq search status    Check index status
 
 OPTIONS:
-  --path <dir>             Directory to search (default: current directory)
+  --path <dir>             Directory to search (if not specified, searches all registered sources)
   --limit <n>              Maximum results to return (default: 10)
   --labels <list>          Filter by labels (comma-separated, OR logic)
   --author <email>         Filter by author email
@@ -345,8 +347,13 @@ OPTIONS:
   --json                   Output in JSON format
   --xml                    Output in XML format
 
+NOTES:
+  By default, searches all registered sources. Use --path to search a specific directory.
+  Use 'mdq source list' to see registered sources.
+
 EXAMPLES:
-  mdq search "authentication"
+  mdq search "authentication"                  # searches all registered sources
+  mdq search "authentication" --path ~/docs    # searches specific directory
   mdq search "" --labels api,docs --limit 5
   mdq search "old" --stale 90d
   mdq search status
@@ -556,6 +563,36 @@ function getOutputFormat(options: ParsedArgs['options']): 'human' | 'json' | 'xm
 	return 'human';
 }
 
+/**
+ * Validate that registered source paths exist.
+ * Exits with error if no sources registered or if paths don't exist.
+ */
+function validateRegisteredSources(): SourceConfig[] {
+	const registered = listRegisteredSources();
+	if (registered.length === 0) {
+		console.error('No registered sources found.');
+		console.error('Either register sources with "mdq source add" or specify --path');
+		process.exit(EXIT_CODES.INVALID_ARGS);
+	}
+
+	// Validate that registered paths exist
+	const missingPaths: string[] = [];
+	for (const s of registered) {
+		if (!fs.existsSync(s.path)) {
+			missingPaths.push(`  ${s.name}: ${s.path}`);
+		}
+	}
+	if (missingPaths.length > 0) {
+		console.error('Some registered source paths do not exist:');
+		for (const p of missingPaths) {
+			console.error(p);
+		}
+		process.exit(EXIT_CODES.INVALID_ARGS);
+	}
+
+	return registered;
+}
+
 async function handleSearchCommand(
 	parsed: ParsedArgs,
 	basePath: string,
@@ -568,7 +605,7 @@ async function handleSearchCommand(
 	}
 
 	const query = parsed.positional[0] ?? '';
-	const result = await runSearchCommand(basePath, {
+	const searchOptions = {
 		query,
 		limit: parsed.options.limit,
 		labels: parsed.options.labels,
@@ -581,8 +618,34 @@ async function handleSearchCommand(
 		updatedWithin: parsed.options.updatedWithin,
 		stale: parsed.options.stale,
 		sort: parsed.options.sort,
-	});
-	console.log(formatter.format(result.results));
+	};
+
+	// If --path is specified, search only that path
+	// Otherwise, search all registered sources
+	let result: SearchResponse;
+	if (parsed.options.path) {
+		result = await runSearchCommand(basePath, searchOptions);
+	} else {
+		// Search all registered sources
+		const registered = validateRegisteredSources();
+		result = await runSearchMultipleCommand(registered, searchOptions);
+	}
+
+	// Display warnings to stderr in human mode, or include in structured output
+	if (result.warnings && result.warnings.length > 0) {
+		if (parsed.options.json || parsed.options.xml) {
+			// Include warnings in structured output
+			console.log(formatter.format(result));
+		} else {
+			// Display warnings to stderr in human mode
+			for (const warning of result.warnings) {
+				console.error(`Warning [${warning.source}]: ${warning.message}`);
+			}
+			console.log(formatter.format(result.results));
+		}
+	} else {
+		console.log(formatter.format(result.results));
+	}
 }
 
 function handleError(error: unknown, formatter: ReturnType<typeof getFormatter>): never {
@@ -644,27 +707,7 @@ export async function run(args: string[]): Promise<void> {
 					console.log(formatter.format(result));
 				} else {
 					// Otherwise, index all registered sources
-					const registered = listRegisteredSources();
-					if (registered.length === 0) {
-						console.error('No registered sources found.');
-						console.error('Either register sources with "mdq source add" or specify --path');
-						process.exit(EXIT_CODES.INVALID_ARGS);
-					}
-
-					// Validate that registered paths exist
-					const missingPaths: string[] = [];
-					for (const s of registered) {
-						if (!fs.existsSync(s.path)) {
-							missingPaths.push(`  ${s.name}: ${s.path}`);
-						}
-					}
-					if (missingPaths.length > 0) {
-						console.error('Some registered source paths do not exist:');
-						for (const p of missingPaths) {
-							console.error(p);
-						}
-						process.exit(EXIT_CODES.INVALID_ARGS);
-					}
+					const registered = validateRegisteredSources();
 
 					// Index each registered source
 					for (const source of registered) {
@@ -827,27 +870,7 @@ export async function run(args: string[]): Promise<void> {
 					console.log(formatter.format(result));
 				} else {
 					// Otherwise, embed all registered sources
-					const registered = listRegisteredSources();
-					if (registered.length === 0) {
-						console.error('No registered sources found.');
-						console.error('Either register sources with "mdq source add" or specify --path');
-						process.exit(EXIT_CODES.INVALID_ARGS);
-					}
-
-					// Validate that registered paths exist
-					const missingPaths: string[] = [];
-					for (const s of registered) {
-						if (!fs.existsSync(s.path)) {
-							missingPaths.push(`  ${s.name}: ${s.path}`);
-						}
-					}
-					if (missingPaths.length > 0) {
-						console.error('Some registered source paths do not exist:');
-						for (const p of missingPaths) {
-							console.error(p);
-						}
-						process.exit(EXIT_CODES.INVALID_ARGS);
-					}
+					const registered = validateRegisteredSources();
 
 					// Embed each registered source
 					for (const source of registered) {

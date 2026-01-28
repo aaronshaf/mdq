@@ -60,6 +60,7 @@ export interface SearchResponse {
 	results: SearchResult[];
 	total: number;
 	query: string;
+	warnings?: Array<{ source: string; message: string }>;
 }
 
 export interface IndexStatus {

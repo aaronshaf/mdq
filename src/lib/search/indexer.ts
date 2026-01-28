@@ -232,11 +232,61 @@ export async function indexDirectory(
 	const files = await scanMarkdownFiles(absolutePath, mdignorePatterns);
 	if (verbose) console.error(`Found ${files.length} markdown files`);
 
+	// Preserve embedding metadata from existing documents before recreating index
+	const existingEmbedMetadata = new Map<
+		string,
+		{ embedded_at?: number; chunk_count?: number; updated_at?: number }
+	>();
+
+	// Check if index exists before trying to read documents
+	const indexExists = await searchClient.indexExists(indexName);
+	if (indexExists) {
+		const existingDocs = await searchClient.getAllDocuments(indexName);
+		for (const doc of existingDocs) {
+			existingEmbedMetadata.set(doc.id, {
+				embedded_at: doc.embedded_at,
+				chunk_count: doc.chunk_count,
+				updated_at: doc.updated_at,
+			});
+		}
+		if (verbose && existingEmbedMetadata.size > 0) {
+			console.error(`Loaded metadata from ${existingEmbedMetadata.size} existing documents`);
+		}
+	}
+
 	if (verbose) console.error(`Recreating index: ${indexName}`);
 	await searchClient.deleteIndex(indexName);
 	await searchClient.createIndex(indexName);
 
 	const { documents, errors } = await parseAllFiles(files, absolutePath, verbose);
+
+	// Restore embedding metadata for unchanged documents
+	let preservedCount = 0;
+	let changedCount = 0;
+	for (const doc of documents) {
+		const existing = existingEmbedMetadata.get(doc.id);
+		if (existing) {
+			// Document is unchanged if updated_at hasn't changed
+			const isUnchanged = existing.updated_at === doc.updated_at;
+
+			if (isUnchanged) {
+				// Preserve embedding metadata
+				doc.embedded_at = existing.embedded_at;
+				doc.chunk_count = existing.chunk_count;
+				preservedCount++;
+			} else {
+				changedCount++;
+			}
+			// If changed (updated_at differs), leave embedded_at undefined
+			// so it will be re-embedded on next `mdq embed`
+		}
+	}
+
+	if (verbose && existingEmbedMetadata.size > 0) {
+		console.error(
+			`Embedding metadata: ${preservedCount} preserved, ${changedCount} invalidated (documents changed)`,
+		);
+	}
 
 	if (documents.length > 0) {
 		await searchClient.addDocuments(indexName, documents);

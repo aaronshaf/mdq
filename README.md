@@ -1,4 +1,4 @@
-# md
+# mdq
 
 CLI for indexing and searching local markdown files via Meilisearch with MCP server support.
 
@@ -8,7 +8,7 @@ CLI for indexing and searching local markdown files via Meilisearch with MCP ser
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
-bun install -g @aaronshaf/md
+bun install -g @aaronshaf/mdq
 ```
 
 ### 2. Start Meilisearch
@@ -71,4 +71,4 @@ See [docs/](docs/) for comprehensive documentation:
 
 ## See Also
 
-- [qmd](https://github.com/tobi/qmd) - Similar tool with opposite tradeoffs: qmd does LLM work at query time (reranking, query expansion), while md does LLM work at index time (embeddings) for fast queries.
+- [qmd](https://github.com/tobi/qmd) - Similar tool with opposite tradeoffs: qmd does LLM work at query time (reranking, query expansion), while mdq does LLM work at index time (embeddings) for fast queries.

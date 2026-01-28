@@ -339,18 +339,31 @@ Edit the Claude Desktop config file:
 | macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 
+**If installed via bun** (most common):
 ```json
 {
   "mcpServers": {
     "kb": {
-      "command": "/full/path/to/md",
-      "args": ["mcp"]
+      "command": "/Users/YOU/.bun/bin/bun",
+      "args": ["run", "/Users/YOU/.bun/bin/md", "mcp"]
     }
   }
 }
 ```
 
-**Important:** Use the full path to `md` (run `which md` to find it). Claude Desktop doesn't inherit your shell PATH.
+**If installed via npm/node:**
+```json
+{
+  "mcpServers": {
+    "kb": {
+      "command": "node",
+      "args": ["/path/to/node_modules/@aaronshaf/md/src/cli.js", "mcp"]
+    }
+  }
+}
+```
+
+**Important:** Claude Desktop doesn't inherit your shell PATH. Run `which bun` and `which md` to find the full paths for your system.
 
 Note: Register sources first with `md source add -s <path> -d <description>`.
 

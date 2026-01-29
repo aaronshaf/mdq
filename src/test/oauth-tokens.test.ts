@@ -5,6 +5,7 @@ import {
 	cleanupExpiredTokens,
 	exchangeAuthCode,
 	generateToken,
+	getAuthCode,
 	getTokenStats,
 	getTokenStoragePath,
 	refreshAccessToken,
@@ -159,6 +160,81 @@ describe('OAuth Tokens', () => {
 			// Wrong verifier should fail
 			const tokenData2 = exchangeAuthCode(code2, wrongVerifier, validateCodeChallenge);
 			expect(tokenData2).toBeUndefined();
+		});
+
+		test('getAuthCode returns auth code data when valid', () => {
+			const code = generateToken(32);
+			const redirectUri = 'http://localhost:8080/callback';
+
+			storeAuthCode(code, {
+				client_id: 'test-client',
+				redirect_uri: redirectUri,
+				code_challenge: 'test-challenge',
+				code_challenge_method: 'S256',
+			});
+
+			const authCodeData = getAuthCode(code);
+			expect(authCodeData).toBeDefined();
+			expect(authCodeData?.client_id).toBe('test-client');
+			expect(authCodeData?.redirect_uri).toBe(redirectUri);
+			expect(authCodeData?.code_challenge).toBe('test-challenge');
+		});
+
+		test('getAuthCode returns undefined for non-existent code', () => {
+			const authCodeData = getAuthCode('non-existent-code');
+			expect(authCodeData).toBeUndefined();
+		});
+
+		test('getAuthCode returns undefined and cleans up expired code', () => {
+			const code = generateToken(32);
+
+			storeAuthCode(code, {
+				client_id: 'test-client',
+				redirect_uri: 'http://localhost:8080/callback',
+				code_challenge: 'test-challenge',
+				code_challenge_method: 'S256',
+			});
+
+			// Manually expire the code
+			const storagePath = getTokenStoragePath();
+			const storage = JSON.parse(fs.readFileSync(storagePath, 'utf-8'));
+			storage.authorization_codes[code].expires_at = Date.now() - 1000;
+			fs.writeFileSync(storagePath, JSON.stringify(storage));
+
+			// getAuthCode should return undefined for expired code
+			const authCodeData = getAuthCode(code);
+			expect(authCodeData).toBeUndefined();
+
+			// Verify the expired code was cleaned up
+			const storageAfter = JSON.parse(fs.readFileSync(storagePath, 'utf-8'));
+			expect(storageAfter.authorization_codes[code]).toBeUndefined();
+		});
+
+		test('getAuthCode does not consume the code (can be called multiple times)', () => {
+			const code = generateToken(32);
+
+			storeAuthCode(code, {
+				client_id: 'test-client',
+				redirect_uri: 'http://localhost:8080/callback',
+				code_challenge: 'test-challenge',
+				code_challenge_method: 'S256',
+			});
+
+			// Call getAuthCode multiple times
+			const authCodeData1 = getAuthCode(code);
+			expect(authCodeData1).toBeDefined();
+
+			const authCodeData2 = getAuthCode(code);
+			expect(authCodeData2).toBeDefined();
+
+			// Both calls should return the same data
+			expect(authCodeData1?.client_id).toBe(authCodeData2?.client_id);
+			expect(authCodeData1?.redirect_uri).toBe(authCodeData2?.redirect_uri);
+
+			// Code should still be usable with exchangeAuthCode
+			const mockValidate = () => true;
+			const tokens = exchangeAuthCode(code, generateToken(32), mockValidate);
+			expect(tokens).toBeDefined();
 		});
 	});
 

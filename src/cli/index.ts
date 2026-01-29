@@ -477,7 +477,8 @@ OPTIONS (for setup):
 
 NOTES:
   OAuth 2.1 with PKCE provides secure authentication for remote access.
-  HTTPS is required when OAuth is enabled (use --cert and --key flags).
+  HTTPS is required when OAuth is enabled, unless binding to localhost
+  for use behind an HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.).
   Access tokens expire after 1 hour (configurable via MDQ_OAUTH_TOKEN_EXPIRY).
 
 EXAMPLES:

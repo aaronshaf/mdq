@@ -134,7 +134,8 @@ export async function runHttpMcpServer(
 	// OAuth over HTTP: only allow if binding to localhost (reverse proxy assumed)
 	if (oauthEnabled && !isHttps) {
 		// Prevent accidental exposure: require localhost binding when using HTTP OAuth
-		const isLocalhost = options.host === '127.0.0.1' || options.host === 'localhost';
+		const isLocalhost =
+			options.host === '127.0.0.1' || options.host === 'localhost' || options.host === '::1';
 
 		if (!isLocalhost) {
 			console.error('Error: OAuth over HTTP requires binding to localhost for security.');
@@ -142,7 +143,7 @@ export async function runHttpMcpServer(
 			console.error('');
 			console.error('Options:');
 			console.error(
-				'  1. Bind to localhost: --host 127.0.0.1 (for use behind HTTPS reverse proxy)',
+				'  1. Bind to localhost: --host 127.0.0.1 or --host ::1 (for HTTPS reverse proxy)',
 			);
 			console.error('  2. Use HTTPS directly: --cert ./cert.pem --key ./key.pem');
 			console.error('');

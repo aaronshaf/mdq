@@ -61,6 +61,7 @@ interface ParsedArgs {
 		host?: string;
 		apiKey?: string;
 		oauth: boolean;
+		allowHttpOauth: boolean;
 		cert?: string;
 		key?: string;
 		// Source command options
@@ -83,7 +84,8 @@ type BooleanFlag =
 	| 'http'
 	| 'noAuth'
 	| 'printConfig'
-	| 'oauth';
+	| 'oauth'
+	| 'allowHttpOauth';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -126,6 +128,7 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--no-auth': 'noAuth',
 	'--print-config': 'printConfig',
 	'--oauth': 'oauth',
+	'--allow-http-oauth': 'allowHttpOauth',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -274,6 +277,7 @@ function parseArgs(args: string[]): ParseResult {
 			noAuth: false,
 			printConfig: false,
 			oauth: false,
+			allowHttpOauth: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -514,6 +518,8 @@ HTTP MODE OPTIONS:
   --oauth                  Enable OAuth 2.1 authentication (requires HTTPS)
   --cert <path>            TLS certificate path (for HTTPS)
   --key <path>             TLS private key path (for HTTPS)
+  --allow-http-oauth       Allow OAuth over HTTP (only behind HTTPS reverse proxy)
+  --verbose                Enable verbose logging for debugging
 
 NOTES:
   If no sources are provided, registered sources from 'mdq source add' are used.
@@ -542,10 +548,12 @@ EXAMPLES:
   # Step 3: Start server with OAuth
   mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem ~/docs
 
-  # Step 4: Expose to internet (optional)
-  cloudflared tunnel --url https://localhost:3000
+  # Alternative: OAuth behind HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.)
+  mdq oauth setup --client-id claude --name "Claude"
+  mdq mcp --http --oauth --allow-http-oauth --port 3001 ~/docs
+  cloudflared tunnel --url http://localhost:3001
 
-  # Step 5: Connect from Claude web UI
+  # Step 4: Connect from Claude web UI
   # Settings > Connectors > Add custom connector
   # Claude will auto-discover OAuth endpoints and guide you through authorization
 `);
@@ -907,6 +915,8 @@ export async function run(args: string[]): Promise<void> {
 							apiKey: string;
 							noAuth: boolean;
 							oauth: boolean;
+							allowHttpOauth: boolean;
+							verbose: boolean;
 							cert?: string;
 							key?: string;
 					  }
@@ -931,6 +941,8 @@ export async function run(args: string[]): Promise<void> {
 						apiKey,
 						noAuth: parsed.options.noAuth,
 						oauth: parsed.options.oauth,
+						allowHttpOauth: parsed.options.allowHttpOauth,
+						verbose: parsed.options.verbose,
 						cert: parsed.options.cert,
 						key: parsed.options.key,
 					};

@@ -115,6 +115,8 @@ export async function runHttpMcpServer(
 		apiKey: string;
 		noAuth: boolean;
 		oauth: boolean;
+		allowHttpOauth: boolean;
+		verbose: boolean;
 		cert?: string;
 		key?: string;
 	},
@@ -127,12 +129,21 @@ export async function runHttpMcpServer(
 		process.exit(1);
 	}
 
-	// Require HTTPS when OAuth is enabled
+	// Require HTTPS when OAuth is enabled (unless explicitly bypassed for reverse proxy)
 	const isHttps = !!(options.cert && options.key);
-	if (oauthEnabled && !isHttps) {
+	if (oauthEnabled && !isHttps && !options.allowHttpOauth) {
 		console.error('Error: HTTPS is required when OAuth is enabled.');
 		console.error('Provide --cert and --key flags for TLS certificate.');
+		console.error(
+			'Or use --allow-http-oauth if behind an HTTPS reverse proxy (e.g., Cloudflare Tunnel).',
+		);
 		process.exit(1);
+	}
+
+	// Warn if OAuth is over HTTP
+	if (oauthEnabled && !isHttps && options.allowHttpOauth) {
+		console.error('[mdq] WARNING: Running OAuth over HTTP (--allow-http-oauth)');
+		console.error('[mdq] Ensure your server is behind an HTTPS reverse proxy!');
 	}
 
 	// Load TLS certificate if provided
@@ -164,8 +175,16 @@ export async function runHttpMcpServer(
 	const fetchHandler = async (req: Request): Promise<Response> => {
 		const url = new URL(req.url);
 
+		// Verbose logging for all requests
+		if (options.verbose) {
+			console.error(`[mdq] ${req.method} ${url.pathname}`);
+		}
+
 		// Handle CORS preflight requests
 		if (req.method === 'OPTIONS') {
+			if (options.verbose) {
+				console.error('[mdq] CORS preflight request');
+			}
 			return createCorsPreflightResponse();
 		}
 
@@ -173,6 +192,9 @@ export async function runHttpMcpServer(
 		if (url.pathname === '/.well-known/oauth-protected-resource' && req.method === 'GET') {
 			if (!oauthEnabled) {
 				return new Response('Not Found', { status: 404 });
+			}
+			if (options.verbose) {
+				console.error('[mdq] OAuth discovery: protected resource metadata requested');
 			}
 			const metadata = getProtectedResourceMetadata(baseUrl);
 			return new Response(JSON.stringify(metadata), {
@@ -184,6 +206,9 @@ export async function runHttpMcpServer(
 		if (url.pathname === '/.well-known/oauth-authorization-server' && req.method === 'GET') {
 			if (!oauthEnabled) {
 				return new Response('Not Found', { status: 404 });
+			}
+			if (options.verbose) {
+				console.error('[mdq] OAuth discovery: authorization server metadata requested');
 			}
 			const metadata = getAuthorizationServerMetadata(baseUrl);
 			return new Response(JSON.stringify(metadata), {
@@ -572,6 +597,9 @@ export async function runHttpMcpServer(
 					validateOAuthToken: oauthEnabled
 						? (token: string) => {
 								const tokenData = validateAccessToken(token);
+								if (options.verbose) {
+									console.error(`[mdq] OAuth token validation: ${tokenData ? 'valid' : 'invalid'}`);
+								}
 								return tokenData !== undefined;
 							}
 						: undefined,
@@ -580,6 +608,9 @@ export async function runHttpMcpServer(
 				if (!isValid) {
 					console.error('[mdq] Authentication failed');
 					return createAuthError(oauthEnabled ? baseUrl : undefined);
+				}
+				if (options.verbose) {
+					console.error('[mdq] Authentication successful');
 				}
 			}
 
@@ -606,6 +637,9 @@ export async function runHttpMcpServer(
 				: undefined;
 
 			if (!transport) {
+				if (options.verbose) {
+					console.error('[mdq] Creating new MCP session');
+				}
 				// Create new transport with session ID generator and callback
 				// Capture in const to avoid closure issues with the let variable
 				const newTransport = new WebStandardStreamableHTTPServerTransport({

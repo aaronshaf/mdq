@@ -112,25 +112,27 @@ function addSingleSource(resolvedPath: string, description?: string, name?: stri
 	}
 
 	// Derive name if not provided
-	if (!name) {
+	let sourceName = name;
+	if (!sourceName) {
 		const parsed = parseSourceArg(resolvedPath);
-		name = parsed.name;
+		sourceName = parsed.name;
 	}
 
 	// Validate name
-	if (!name || name.trim().length === 0) {
+	if (!sourceName || sourceName.trim().length === 0) {
 		throw new Error('Source name cannot be empty');
 	}
 
 	// If no description provided, check for .confluence.json
-	if (!description) {
+	let sourceDescription = description;
+	if (!sourceDescription) {
 		const confluenceJsonPath = path.join(resolvedPath, '.confluence.json');
 		if (fs.existsSync(confluenceJsonPath)) {
 			try {
 				const confluenceJson = JSON.parse(fs.readFileSync(confluenceJsonPath, 'utf-8'));
 				const spaceName = confluenceJson.spaceName;
 				if (typeof spaceName === 'string' && spaceName.trim()) {
-					description = spaceName.trim();
+					sourceDescription = spaceName.trim();
 				}
 			} catch {
 				// Silently ignore if we can't read or parse .confluence.json
@@ -139,16 +141,16 @@ function addSingleSource(resolvedPath: string, description?: string, name?: stri
 	}
 
 	const source: SourceConfig = {
-		name,
+		name: sourceName,
 		path: resolvedPath,
 	};
 
-	if (description) {
-		source.description = description;
+	if (sourceDescription) {
+		source.description = sourceDescription;
 	}
 
 	addSource(source);
-	console.log(`Added source "${name}" -> ${resolvedPath}`);
+	console.log(`Added source "${sourceName}" -> ${resolvedPath}`);
 	if (source.description) {
 		console.log(`  Description: ${source.description}`);
 	}
@@ -165,7 +167,7 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 
 	// Add -s flag arguments
 	if (args.mcpSources.length > 0) {
-		sourcePaths.push(...args.mcpSources.map(s => s.source));
+		sourcePaths.push(...args.mcpSources.map((s) => s.source));
 	}
 
 	if (sourcePaths.length === 0) {
@@ -198,7 +200,9 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 							addSingleSource(dirPath, globalDescription);
 							addedCount++;
 						} catch (error) {
-							errors.push(`  ${dirPath}: ${error instanceof Error ? error.message : String(error)}`);
+							errors.push(
+								`  ${dirPath}: ${error instanceof Error ? error.message : String(error)}`,
+							);
 						}
 					}
 				} else {
@@ -208,9 +212,7 @@ export function runSourceAddCommand(args: SourceCommandArgs): void {
 					addedCount++;
 				}
 			} catch (error) {
-				errors.push(
-					`  ${sourcePath}: ${error instanceof Error ? error.message : String(error)}`,
-				);
+				errors.push(`  ${sourcePath}: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
 

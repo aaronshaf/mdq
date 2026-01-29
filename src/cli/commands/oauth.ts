@@ -20,7 +20,7 @@ export interface OAuthCommandArgs {
 	options: {
 		clientId?: string;
 		name?: string;
-		redirectUri?: string;
+		redirectUris: string[]; // Multiple redirect URIs supported
 	};
 }
 
@@ -42,8 +42,14 @@ function runOAuthSetup(args: OAuthCommandArgs): void {
 	// Get client name from flag or use default
 	const clientName = args.options.name ?? 'Default Client';
 
-	// Get redirect URI from flag or use Claude.ai default
-	const redirectUri = args.options.redirectUri ?? 'https://claude.ai/oauth/callback';
+	// Get redirect URIs from flags or use defaults (Claude + ChatGPT)
+	const redirectUris =
+		args.options.redirectUris.length > 0
+			? args.options.redirectUris
+			: [
+					'https://claude.ai/api/mcp/auth_callback', // Claude web UI
+					'https://chatgpt.com/connector_platform_oauth_redirect', // ChatGPT MCP connectors
+				];
 
 	// Generate client secret
 	const clientSecret = generateClientSecret();
@@ -52,7 +58,7 @@ function runOAuthSetup(args: OAuthCommandArgs): void {
 	const client: OAuthClient = {
 		client_id: clientId,
 		client_secret: clientSecret,
-		redirect_uris: [redirectUri],
+		redirect_uris: redirectUris,
 		name: clientName,
 	};
 
@@ -63,7 +69,7 @@ function runOAuthSetup(args: OAuthCommandArgs): void {
 		console.log(`Client ID:     ${client.client_id}`);
 		console.log(`Client Secret: ${client.client_secret}`);
 		console.log(`Client Name:   ${client.name}`);
-		console.log(`Redirect URI:  ${redirectUri}\n`);
+		console.log(`Redirect URIs: ${redirectUris.join(', ')}\n`);
 
 		console.log('Add to Claude web UI:');
 		console.log('1. Go to Settings > Connectors > Add custom connector');
@@ -222,7 +228,9 @@ export function runOAuthCommand(args: OAuthCommandArgs): void {
 			console.error('Options (for setup):');
 			console.error('  --client-id <id>       Client ID (default: auto-generated)');
 			console.error('  --name <name>          Client name (default: "Default Client")');
-			console.error('  --redirect-uri <uri>   Redirect URI (default: Claude.ai)');
+			console.error(
+				'  --redirect-uri <uri>   Redirect URI (repeatable, defaults: Claude + ChatGPT)',
+			);
 			process.exit(EXIT_CODES.INVALID_ARGS);
 	}
 }

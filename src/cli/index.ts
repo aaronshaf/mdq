@@ -69,7 +69,7 @@ interface ParsedArgs {
 		description?: string;
 		// OAuth command options
 		clientId?: string;
-		redirectUri?: string;
+		redirectUris: string[]; // Multiple redirect URIs supported
 	};
 }
 
@@ -103,7 +103,6 @@ type StringFlag =
 	| 'cert'
 	| 'key'
 	| 'clientId'
-	| 'redirectUri'
 	| 'publicUrl';
 
 type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
@@ -149,7 +148,6 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--cert': 'cert',
 	'--key': 'key',
 	'--client-id': 'clientId',
-	'--redirect-uri': 'redirectUri',
 	'--public-url': 'publicUrl',
 };
 
@@ -277,6 +275,7 @@ function parseArgs(args: string[]): ParseResult {
 			noAuth: false,
 			printConfig: false,
 			oauth: false,
+			redirectUris: [],
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -317,6 +316,18 @@ function parseArgs(args: string[]): ParseResult {
 				console.error('Error: -d/--desc must follow a -s/--source flag');
 				process.exit(EXIT_CODES.INVALID_ARGS);
 			}
+			i += 2;
+			continue;
+		}
+
+		// Handle OAuth redirect URI flags: --redirect-uri (supports multiple)
+		if (arg === '--redirect-uri') {
+			const value = args[i + 1];
+			if (!value || value.startsWith('-')) {
+				console.error('Error: --redirect-uri requires a URI argument');
+				process.exit(EXIT_CODES.INVALID_ARGS);
+			}
+			result.options.redirectUris.push(value);
 			i += 2;
 			continue;
 		}
@@ -476,7 +487,7 @@ USAGE:
 OPTIONS (for setup):
   --client-id <id>         Client ID (default: auto-generated)
   --name <name>            Client name (default: "Default Client")
-  --redirect-uri <uri>     Redirect URI (default: Claude.ai)
+  --redirect-uri <uri>     Redirect URI (repeatable, defaults: Claude + ChatGPT)
 
 NOTES:
   OAuth 2.1 with PKCE provides secure authentication for remote access.
@@ -824,7 +835,7 @@ export async function run(args: string[]): Promise<void> {
 					options: {
 						clientId: parsed.options.clientId,
 						name: parsed.options.name,
-						redirectUri: parsed.options.redirectUri,
+						redirectUris: parsed.options.redirectUris,
 					},
 				};
 				runOAuthCommand(oauthArgs);

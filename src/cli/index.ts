@@ -937,6 +937,11 @@ export async function run(args: string[]): Promise<void> {
 				}
 
 				await runMcpCommand(sources, httpOptions);
+				// Don't call process.exit() for HTTP server mode - let it run indefinitely
+				// The server will keep the event loop alive
+				if (parsed.options.http) {
+					return;
+				}
 				break;
 			}
 

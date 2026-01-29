@@ -12,7 +12,6 @@ export async function runMcpCommand(
 		apiKey: string;
 		noAuth: boolean;
 		oauth: boolean;
-		allowHttpOauth: boolean;
 		verbose: boolean;
 		cert?: string;
 		key?: string;

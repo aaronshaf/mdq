@@ -115,7 +115,6 @@ export async function runHttpMcpServer(
 		apiKey: string;
 		noAuth: boolean;
 		oauth: boolean;
-		allowHttpOauth: boolean;
 		verbose: boolean;
 		cert?: string;
 		key?: string;
@@ -129,21 +128,16 @@ export async function runHttpMcpServer(
 		process.exit(1);
 	}
 
-	// Require HTTPS when OAuth is enabled (unless explicitly bypassed for reverse proxy)
+	// Check if HTTPS is configured
 	const isHttps = !!(options.cert && options.key);
-	if (oauthEnabled && !isHttps && !options.allowHttpOauth) {
-		console.error('Error: HTTPS is required when OAuth is enabled.');
-		console.error('Provide --cert and --key flags for TLS certificate.');
-		console.error(
-			'Or use --allow-http-oauth if behind an HTTPS reverse proxy (e.g., Cloudflare Tunnel).',
-		);
-		process.exit(1);
-	}
 
-	// Warn if OAuth is over HTTP
-	if (oauthEnabled && !isHttps && options.allowHttpOauth) {
-		console.error('[mdq] WARNING: Running OAuth over HTTP (--allow-http-oauth)');
-		console.error('[mdq] Ensure your server is behind an HTTPS reverse proxy!');
+	// Warn if OAuth is over HTTP (assume reverse proxy setup)
+	if (oauthEnabled && !isHttps) {
+		console.error('[mdq] WARNING: Running OAuth over HTTP (no TLS cert provided)');
+		console.error(
+			'[mdq] This is only secure behind an HTTPS reverse proxy (e.g., Cloudflare Tunnel, nginx)',
+		);
+		console.error('[mdq] If exposing directly, provide --cert and --key for HTTPS');
 	}
 
 	// Load TLS certificate if provided

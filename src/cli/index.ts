@@ -61,7 +61,6 @@ interface ParsedArgs {
 		host?: string;
 		apiKey?: string;
 		oauth: boolean;
-		allowHttpOauth: boolean;
 		cert?: string;
 		key?: string;
 		// Source command options
@@ -84,8 +83,7 @@ type BooleanFlag =
 	| 'http'
 	| 'noAuth'
 	| 'printConfig'
-	| 'oauth'
-	| 'allowHttpOauth';
+	| 'oauth';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -128,7 +126,6 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--no-auth': 'noAuth',
 	'--print-config': 'printConfig',
 	'--oauth': 'oauth',
-	'--allow-http-oauth': 'allowHttpOauth',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -277,7 +274,6 @@ function parseArgs(args: string[]): ParseResult {
 			noAuth: false,
 			printConfig: false,
 			oauth: false,
-			allowHttpOauth: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -515,10 +511,9 @@ HTTP MODE OPTIONS:
   --host <string>          Host to bind (default: 127.0.0.1)
   --api-key <string>       API key for authentication (or set MDQ_MCP_API_KEY)
   --no-auth                Disable authentication (for testing only)
-  --oauth                  Enable OAuth 2.1 authentication (requires HTTPS)
-  --cert <path>            TLS certificate path (for HTTPS)
-  --key <path>             TLS private key path (for HTTPS)
-  --allow-http-oauth       Allow OAuth over HTTP (only behind HTTPS reverse proxy)
+  --oauth                  Enable OAuth 2.1 authentication
+  --cert <path>            TLS certificate path (for HTTPS with OAuth)
+  --key <path>             TLS private key path (for HTTPS with OAuth)
   --verbose                Enable verbose logging for debugging
 
 NOTES:
@@ -546,11 +541,11 @@ EXAMPLES:
   mdq oauth setup --client-id claude --name "Claude"
 
   # Step 3: Start server with OAuth
+  # Option A: With local HTTPS
   mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem ~/docs
 
-  # Alternative: OAuth behind HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.)
-  mdq oauth setup --client-id claude --name "Claude"
-  mdq mcp --http --oauth --allow-http-oauth --port 3001 ~/docs
+  # Option B: Behind HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.)
+  mdq mcp --http --oauth --port 3001 ~/docs
   cloudflared tunnel --url http://localhost:3001
 
   # Step 4: Connect from Claude web UI
@@ -915,7 +910,6 @@ export async function run(args: string[]): Promise<void> {
 							apiKey: string;
 							noAuth: boolean;
 							oauth: boolean;
-							allowHttpOauth: boolean;
 							verbose: boolean;
 							cert?: string;
 							key?: string;
@@ -941,7 +935,6 @@ export async function run(args: string[]): Promise<void> {
 						apiKey,
 						noAuth: parsed.options.noAuth,
 						oauth: parsed.options.oauth,
-						allowHttpOauth: parsed.options.allowHttpOauth,
 						verbose: parsed.options.verbose,
 						cert: parsed.options.cert,
 						key: parsed.options.key,

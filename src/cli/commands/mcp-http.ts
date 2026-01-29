@@ -131,13 +131,30 @@ export async function runHttpMcpServer(
 	// Check if HTTPS is configured
 	const isHttps = !!(options.cert && options.key);
 
-	// Warn if OAuth is over HTTP (assume reverse proxy setup)
+	// OAuth over HTTP: only allow if binding to localhost (reverse proxy assumed)
 	if (oauthEnabled && !isHttps) {
-		console.error('[mdq] WARNING: Running OAuth over HTTP (no TLS cert provided)');
+		// Prevent accidental exposure: require localhost binding when using HTTP OAuth
+		const isLocalhost = options.host === '127.0.0.1' || options.host === 'localhost';
+
+		if (!isLocalhost) {
+			console.error('Error: OAuth over HTTP requires binding to localhost for security.');
+			console.error(`Currently binding to: ${options.host}`);
+			console.error('');
+			console.error('Options:');
+			console.error(
+				'  1. Bind to localhost: --host 127.0.0.1 (for use behind HTTPS reverse proxy)',
+			);
+			console.error('  2. Use HTTPS directly: --cert ./cert.pem --key ./key.pem');
+			console.error('');
+			console.error('This prevents accidentally exposing OAuth over HTTP to the internet.');
+			process.exit(1);
+		}
+
+		// Warning for localhost HTTP OAuth (reverse proxy assumed)
+		console.error('[mdq] WARNING: OAuth over HTTP on localhost (reverse proxy assumed)');
 		console.error(
-			'[mdq] This is only secure behind an HTTPS reverse proxy (e.g., Cloudflare Tunnel, nginx)',
+			'[mdq] Ensure an HTTPS reverse proxy (Cloudflare Tunnel, nginx) is forwarding to this server',
 		);
-		console.error('[mdq] If exposing directly, provide --cert and --key for HTTPS');
 	}
 
 	// Load TLS certificate if provided

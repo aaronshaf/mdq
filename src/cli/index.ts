@@ -521,6 +521,9 @@ NOTES:
   Use 'mdq source list' to see registered sources.
   CLI sources (-s flags) override registered sources.
 
+  OAuth over HTTP requires --host 127.0.0.1 (for reverse proxy setup).
+  This prevents accidentally exposing OAuth over HTTP to the internet.
+
 EXAMPLES:
   # Local access (stdio)
   mdq mcp                        # uses registered sources
@@ -545,7 +548,8 @@ EXAMPLES:
   mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem ~/docs
 
   # Option B: Behind HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.)
-  mdq mcp --http --oauth --port 3001 ~/docs
+  # IMPORTANT: Must use --host 127.0.0.1 for OAuth over HTTP (security requirement)
+  mdq mcp --http --oauth --host 127.0.0.1 --port 3001 ~/docs
   cloudflared tunnel --url http://localhost:3001
 
   # Step 4: Connect from Claude web UI

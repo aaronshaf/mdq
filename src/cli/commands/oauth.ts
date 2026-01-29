@@ -72,7 +72,12 @@ function runOAuthSetup(args: OAuthCommandArgs): void {
 		console.log(`4. OAuth Client Secret: ${client.client_secret}\n`);
 
 		console.log('Start server with OAuth:');
-		console.log('  mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem\n');
+		console.log('  # With HTTPS:');
+		console.log('  mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem');
+		console.log('');
+		console.log('  # Behind reverse proxy (HTTP):');
+		console.log('  mdq mcp --http --oauth --host 127.0.0.1 --port 3001');
+		console.log('  cloudflared tunnel --url http://localhost:3001\n');
 
 		console.log(`Config saved to: ${getOAuthConfigPath()}`);
 	} catch (error) {

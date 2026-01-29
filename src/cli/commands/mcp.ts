@@ -15,6 +15,7 @@ export async function runMcpCommand(
 		verbose: boolean;
 		cert?: string;
 		key?: string;
+		publicUrl?: string;
 	},
 ): Promise<void> {
 	const client = createSearchClient();

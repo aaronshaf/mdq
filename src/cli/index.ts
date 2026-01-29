@@ -63,6 +63,7 @@ interface ParsedArgs {
 		oauth: boolean;
 		cert?: string;
 		key?: string;
+		publicUrl?: string;
 		// Source command options
 		name?: string;
 		description?: string;
@@ -102,7 +103,8 @@ type StringFlag =
 	| 'cert'
 	| 'key'
 	| 'clientId'
-	| 'redirectUri';
+	| 'redirectUri'
+	| 'publicUrl';
 
 type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
 const VALID_SORT_VALUES = new Set<string>([
@@ -148,6 +150,7 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'--key': 'key',
 	'--client-id': 'clientId',
 	'--redirect-uri': 'redirectUri',
+	'--public-url': 'publicUrl',
 };
 
 function handlePositionalArg(result: ParsedArgs, arg: string): void {
@@ -515,6 +518,7 @@ HTTP MODE OPTIONS:
   --oauth                  Enable OAuth 2.1 authentication
   --cert <path>            TLS certificate path (for HTTPS with OAuth)
   --key <path>             TLS private key path (for HTTPS with OAuth)
+  --public-url <url>       Public URL for OAuth (when behind reverse proxy)
   --verbose                Enable verbose logging for debugging
 
 NOTES:
@@ -550,8 +554,10 @@ EXAMPLES:
 
   # Option B: Behind HTTPS reverse proxy (Cloudflare Tunnel, nginx, etc.)
   # IMPORTANT: Must use --host 127.0.0.1 for OAuth over HTTP (security requirement)
-  mdq mcp --http --oauth --host 127.0.0.1 --port 3001 ~/docs
+  # Start tunnel first to get the public URL
   cloudflared tunnel --url http://localhost:3001
+  # Then start server with the public URL
+  mdq mcp --http --oauth --host 127.0.0.1 --port 3001 --public-url https://your-tunnel.trycloudflare.com ~/docs
 
   # Step 4: Connect from Claude web UI
   # Settings > Connectors > Add custom connector
@@ -918,6 +924,7 @@ export async function run(args: string[]): Promise<void> {
 							verbose: boolean;
 							cert?: string;
 							key?: string;
+							publicUrl?: string;
 					  }
 					| undefined;
 
@@ -943,6 +950,7 @@ export async function run(args: string[]): Promise<void> {
 						verbose: parsed.options.verbose,
 						cert: parsed.options.cert,
 						key: parsed.options.key,
+						publicUrl: parsed.options.publicUrl,
 					};
 				}
 

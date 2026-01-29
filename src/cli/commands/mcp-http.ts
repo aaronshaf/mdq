@@ -118,6 +118,7 @@ export async function runHttpMcpServer(
 		verbose: boolean;
 		cert?: string;
 		key?: string;
+		publicUrl?: string;
 	},
 ): Promise<void> {
 	// Check OAuth requirements
@@ -173,8 +174,11 @@ export async function runHttpMcpServer(
 	}
 
 	// Build base URL for OAuth metadata
+	// Use publicUrl if provided (for reverse proxy), otherwise use local host:port
 	const protocol = isHttps ? 'https' : 'http';
-	const baseUrl = `${protocol}://${options.host}:${options.port}`;
+	const baseUrl = options.publicUrl
+		? options.publicUrl.replace(/\/+$/, '') // Remove trailing slashes
+		: `${protocol}://${options.host}:${options.port}`;
 
 	// Create MCP server instance (shared across all sessions)
 	const mcpServer = await createMcpServerInstance(sources, client);

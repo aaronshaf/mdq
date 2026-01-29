@@ -21,6 +21,7 @@ Users need a way to expose their indexed markdown content directly to AI assista
 | Multiple sources | Index multiple directories | Supported with descriptions |
 | Registered sources | Persist source config | Store in `~/.config/mdq/sources.json` |
 | Remote access | HTTP transport | Supported for Claude web UI |
+| Secure authentication | OAuth 2.1 support | Authorization code flow with PKCE |
 
 ## Non-Goals
 
@@ -248,9 +249,9 @@ For local MCP clients like Claude Code and Claude Desktop:
 mdq mcp -s ~/docs -d "Documentation"
 ```
 
-### HTTP
+### HTTP with Bearer Token
 
-For remote access from Claude web UI or other HTTP clients:
+For remote access using simple API key authentication:
 
 ```bash
 export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
@@ -267,17 +268,72 @@ mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 | `--api-key` | `MDQ_MCP_API_KEY` | (required) | Authentication key |
 | `--no-auth` | - | false | Disable auth (testing only) |
 
+### HTTP with OAuth 2.1
+
+For production remote access with secure authorization flow (recommended for Claude web UI):
+
+```bash
+# 1. Generate TLS certificate (required for OAuth)
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+# 2. Create OAuth client
+mdq oauth setup --client-id claude --name "Claude"
+
+# 3. Start HTTPS server with OAuth
+mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem -s ~/docs -d "Documentation"
+```
+
+**OAuth Configuration:**
+
+| Option | Environment | Default | Description |
+|--------|-------------|---------|-------------|
+| `--oauth` | - | false | Enable OAuth authentication |
+| `--cert` | - | (required) | TLS certificate path |
+| `--key` | - | (required) | TLS private key path |
+| - | `MDQ_OAUTH_TOKEN_EXPIRY` | 3600 | Access token lifetime (seconds) |
+
+**OAuth Client Management:**
+
+```bash
+mdq oauth setup [--client-id <id>] [--name <name>]   # Create OAuth client
+mdq oauth list                                        # List configured clients
+mdq oauth status                                      # Show OAuth status and tokens
+mdq oauth remove <client-id>                          # Remove client and revoke tokens
+```
+
+**OAuth Security Features:**
+- Authorization code flow with PKCE (SHA256)
+- Constant-time secret comparison (prevents timing attacks)
+- Rate limiting on token endpoint (5 failed attempts = 5 min cooldown)
+- HTTPS required (enforced when OAuth enabled)
+- Short-lived tokens (auth codes: 5 min, access tokens: 1 hour)
+- File permissions: 0600 for config and token storage
+
+**OAuth Endpoints:**
+- Discovery: `GET /.well-known/oauth-protected-resource`
+- Authorization: `GET/POST /oauth/authorize`
+- Token: `POST /oauth/token`
+
 **Exposing to internet:**
 
 ```bash
-# Cloudflare Tunnel (recommended)
-cloudflared tunnel --url http://localhost:3000
+# Cloudflare Tunnel (recommended - provides HTTPS)
+cloudflared tunnel --url https://localhost:3000
 
 # Or ngrok
-ngrok http 3000
+ngrok http https://localhost:3000
 ```
 
 **Connect from Claude web UI:**
+
+*With OAuth (recommended):*
+1. Settings > Connectors > "Add custom connector"
+2. URL: `https://your-tunnel-url.com/mcp`
+3. Configure OAuth Client ID and Secret from `mdq oauth setup`
+4. Claude auto-discovers OAuth endpoints
+5. User authorizes in browser
+
+*With Bearer token:*
 1. Settings > Connectors > "Add custom connector"
 2. URL: `https://your-tunnel-url.com/mcp`
 3. Provide API key when prompted

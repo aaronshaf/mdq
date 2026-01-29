@@ -71,15 +71,25 @@ export function saveConfig(config: Config): void {
 
 /**
  * Add a source to the config.
- * Throws if a source with the same name already exists.
+ * Throws if a source with the same name or path already exists.
  */
 export function addSource(source: SourceConfig): void {
 	const config = loadConfig();
 
 	// Check for duplicate name
-	const existing = config.sources.find((s) => s.name === source.name);
-	if (existing) {
-		throw new Error(`Source with name "${source.name}" already exists (path: ${existing.path})`);
+	const existingName = config.sources.find((s) => s.name === source.name);
+	if (existingName) {
+		throw new Error(
+			`Source with name "${source.name}" already exists (path: ${existingName.path})`,
+		);
+	}
+
+	// Check for duplicate path
+	const existingPath = config.sources.find((s) => s.path === source.path);
+	if (existingPath) {
+		throw new Error(
+			`Source with path "${source.path}" already exists (name: ${existingPath.name})`,
+		);
 	}
 
 	config.sources.push(source);

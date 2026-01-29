@@ -260,6 +260,63 @@ docs  /Users/me/docs    Documentation
 kb    /Users/me/kb      Knowledge base
 ```
 
+### mdq oauth
+
+Manage OAuth 2.1 authentication for remote access.
+
+```
+mdq oauth setup [options]       Create a new OAuth client
+mdq oauth list                  List configured OAuth clients
+mdq oauth remove <client-id>    Remove an OAuth client
+mdq oauth status                Show OAuth status and tokens
+```
+
+**Options (for setup):**
+
+| Option | Description |
+|--------|-------------|
+| `--client-id <id>` | Client ID (default: auto-generated) |
+| `--name <name>` | Client name (default: "Default Client") |
+| `--redirect-uri <uri>` | Redirect URI (default: Claude.ai) |
+
+**Examples:**
+
+```bash
+# Create OAuth client for Claude
+mdq oauth setup --client-id claude --name "Claude"
+
+# List configured clients
+mdq oauth list
+
+# Check OAuth status and token statistics
+mdq oauth status
+
+# Remove client and revoke tokens
+mdq oauth remove claude
+```
+
+**Output (setup):**
+
+```
+OAuth client created successfully!
+
+Client ID:     claude
+Client Secret: 7c8fe084ebcd7294c36620ae294890ec5aeb5a8e0c5d3571dff3656c651cb126
+Client Name:   Claude
+Redirect URI:  https://claude.ai/oauth/callback
+
+Add to Claude web UI:
+1. Go to Settings > Connectors > Add custom connector
+2. URL: https://your-server.com/mcp
+3. OAuth Client ID: claude
+4. OAuth Client Secret: 7c8fe084ebcd7294c36620ae294890ec5aeb5a8e0c5d3571dff3656c651cb126
+
+Start server with OAuth:
+  mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem
+
+Config saved to: /Users/me/.config/mdq/oauth.json
+```
+
 ### mdq mcp
 
 Launch an MCP server for AI assistant integration.
@@ -300,6 +357,9 @@ mdq mcp [sources...] [options]
 | `--host <string>` | Host to bind (default: 127.0.0.1) |
 | `--api-key <string>` | API key (or set MDQ_MCP_API_KEY) |
 | `--no-auth` | Disable authentication (testing only) |
+| `--oauth` | Enable OAuth 2.1 authentication (requires HTTPS) |
+| `--cert <path>` | TLS certificate path (for HTTPS) |
+| `--key <path>` | TLS private key path (for HTTPS) |
 
 **Examples:**
 
@@ -311,12 +371,16 @@ mdq mcp
 # CLI override with descriptions
 mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
-# HTTP mode
+# HTTP mode with Bearer token
 export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
 mdq mcp --http -s ~/docs -d "Documentation"
+
+# HTTPS mode with OAuth (recommended)
+mdq oauth setup --client-id claude --name "Claude"
+mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem -s ~/docs -d "Documentation"
 ```
 
-**Startup (stderr):**
+**Startup (stderr - stdio mode):**
 
 ```
 mdq mcp: serving 2 sources
@@ -324,6 +388,19 @@ mdq mcp: serving 2 sources
   - wiki: /Users/me/wiki (Team docs)
 mdq mcp: Meilisearch connected
 mdq mcp: MCP server running on stdio
+```
+
+**Startup (stderr - HTTPS with OAuth):**
+
+```
+[mdq] HTTPS MCP server started for sources: docs:~/docs (Documentation)
+[mdq] Listening on https://0.0.0.0:3000/mcp
+[mdq] Health check: https://0.0.0.0:3000/health
+[mdq] OAuth: ENABLED
+[mdq] Authorization endpoint: https://0.0.0.0:3000/oauth/authorize
+[mdq] Token endpoint: https://0.0.0.0:3000/oauth/token
+[mdq] Discovery: /.well-known/oauth-protected-resource
+[mdq] Authentication: OAuth 2.1 or Bearer token
 ```
 
 See [mcp.md](mcp.md) for full MCP tool specifications.

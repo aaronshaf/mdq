@@ -394,7 +394,11 @@ Note: Claude Desktop requires full paths and bun installs need bun as the comman
 
 ### HTTP Mode (Remote Access)
 
-Run the MCP server over HTTP for Claude web UI or remote clients:
+Run the MCP server over HTTP for Claude web UI or remote clients.
+
+#### Option 1: Bearer Token Authentication (Simple)
+
+Best for quick testing or single-user scenarios:
 
 ```bash
 # Generate API key
@@ -407,17 +411,56 @@ mdq mcp --http -s ~/docs -d "Documentation"
 mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```
 
+#### Option 2: OAuth 2.1 Authentication (Recommended)
+
+Best for production use with Claude web UI. Provides secure authorization code flow with PKCE:
+
+```bash
+# 1. Generate self-signed certificate for testing (or use real cert)
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+# 2. Set up OAuth client
+mdq oauth setup --client-id claude --name "Claude"
+
+# 3. Start HTTPS server with OAuth
+mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem -s ~/docs -d "Documentation"
+```
+
+**OAuth Client Management:**
+
+```bash
+mdq oauth setup [--client-id <id>] [--name <name>]   # Create OAuth client
+mdq oauth list                                        # List configured clients
+mdq oauth status                                      # Show OAuth status
+mdq oauth remove <client-id>                          # Remove client
+```
+
+**OAuth Configuration:**
+- OAuth clients: `~/.config/mdq/oauth.json` (chmod 0600)
+- OAuth tokens: `~/.config/mdq/oauth-tokens.json` (chmod 0600)
+- Access tokens expire after 1 hour (configurable via `MDQ_OAUTH_TOKEN_EXPIRY`)
+- Refresh tokens expire after 30 days (configurable via `MDQ_OAUTH_REFRESH_TOKEN_EXPIRY`)
+- Token revocation supported via `/oauth/revoke` endpoint (RFC 7009)
+
 **Expose to internet:**
 
 ```bash
-# Cloudflare Tunnel (recommended)
-cloudflared tunnel --url http://localhost:3000
+# Cloudflare Tunnel (recommended - provides HTTPS)
+cloudflared tunnel --url https://localhost:3000
 
 # Or ngrok
-ngrok http 3000
+ngrok http https://localhost:3000
 ```
 
 **Connect from Claude web UI:**
+
+*With OAuth (recommended):*
+1. Settings > Connectors > "Add custom connector"
+2. Name: `My Docs`, URL: `https://your-tunnel-url.com/mcp`
+3. Claude will auto-discover OAuth endpoints
+4. Authorize in browser when prompted
+
+*With Bearer token:*
 1. Settings > Connectors > "Add custom connector"
 2. Name: `My Docs`, URL: `https://your-tunnel-url.com/mcp`
 3. Provide your `MDQ_MCP_API_KEY` when prompted
@@ -430,10 +473,11 @@ ngrok http 3000
 |----------|---------|-------------|
 | `MEILISEARCH_HOST` | `http://localhost:7700` | Meilisearch server URL |
 | `MEILISEARCH_API_KEY` | - | Meilisearch API key |
-| `MDQ_MCP_API_KEY` | - | API key for HTTP mode |
+| `MDQ_MCP_API_KEY` | - | API key for HTTP mode (Bearer token) |
 | `MDQ_MCP_PORT` | `3000` | HTTP mode port |
 | `MDQ_MCP_HOST` | `127.0.0.1` | HTTP mode host |
 | `MDQ_MCP_CORS_ORIGIN` | `https://claude.ai` | Allowed CORS origin |
+| `MDQ_OAUTH_TOKEN_EXPIRY` | `3600` | OAuth access token lifetime (seconds) |
 | `MD_EMBEDDING_ENDPOINT` | `http://localhost:11434` | Embedding endpoint |
 | `MD_EMBEDDING_MODEL` | `nomic-embed-text:latest` | Embedding model |
 | `MD_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
@@ -444,6 +488,8 @@ ngrok http 3000
 | File | Description |
 |------|-------------|
 | `~/.config/mdq/sources.json` | Registered sources for MCP server |
+| `~/.config/mdq/oauth.json` | OAuth client configurations (chmod 0600) |
+| `~/.config/mdq/oauth-tokens.json` | OAuth authorization codes and access tokens (chmod 0600) |
 
 The `XDG_CONFIG_HOME` environment variable is respected for config file location.
 

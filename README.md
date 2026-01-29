@@ -34,6 +34,7 @@ mdq search <query>      Search indexed content
 mdq index               Build/rebuild index
 mdq embed               Generate embeddings for semantic search
 mdq source              Manage registered sources for MCP server
+mdq oauth               Manage OAuth 2.1 authentication
 mdq mcp [sources...]    Start MCP server
 ```
 
@@ -53,9 +54,13 @@ mdq mcp
 # Or specify sources directly (overrides registered)
 mdq mcp -s ~/docs -d "Documentation"
 
-# HTTP mode for remote access (Claude web UI)
+# HTTP mode with Bearer token (simple)
 export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
 mdq mcp --http
+
+# Or use OAuth 2.1 (recommended for production)
+mdq oauth setup --client-id claude --name "Claude"
+mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem
 
 # Add to Claude Code
 claude mcp add kb -- mdq mcp

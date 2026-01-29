@@ -6,6 +6,7 @@ import { type Source, parseSources } from '../lib/mcp/sources.js';
 import type { SearchResponse } from '../lib/search/index.js';
 import { runEmbedCommand, runEmbedStatusCommand } from './commands/embed.js';
 import { runMcpCommand } from './commands/mcp.js';
+import { type OAuthCommandArgs, runOAuthCommand } from './commands/oauth.js';
 import {
 	runSearchCommand,
 	runSearchIndexCommand,
@@ -59,9 +60,15 @@ interface ParsedArgs {
 		port?: number;
 		host?: string;
 		apiKey?: string;
+		oauth: boolean;
+		cert?: string;
+		key?: string;
 		// Source command options
 		name?: string;
 		description?: string;
+		// OAuth command options
+		clientId?: string;
+		redirectUri?: string;
 	};
 }
 
@@ -75,7 +82,8 @@ type BooleanFlag =
 	| 'dryRun'
 	| 'http'
 	| 'noAuth'
-	| 'printConfig';
+	| 'printConfig'
+	| 'oauth';
 type StringFlag =
 	| 'path'
 	| 'author'
@@ -90,7 +98,11 @@ type StringFlag =
 	| 'host'
 	| 'apiKey'
 	| 'name'
-	| 'description';
+	| 'description'
+	| 'cert'
+	| 'key'
+	| 'clientId'
+	| 'redirectUri';
 
 type SortValue = 'created_at' | '-created_at' | 'updated_at' | '-updated_at';
 const VALID_SORT_VALUES = new Set<string>([
@@ -113,6 +125,7 @@ const BOOLEAN_FLAGS: Record<string, BooleanFlag> = {
 	'--http': 'http',
 	'--no-auth': 'noAuth',
 	'--print-config': 'printConfig',
+	'--oauth': 'oauth',
 };
 
 const STRING_FLAGS: Record<string, StringFlag> = {
@@ -131,6 +144,10 @@ const STRING_FLAGS: Record<string, StringFlag> = {
 	'-d': 'description',
 	'--desc': 'description',
 	'--description': 'description',
+	'--cert': 'cert',
+	'--key': 'key',
+	'--client-id': 'clientId',
+	'--redirect-uri': 'redirectUri',
 };
 
 function handlePositionalArg(result: ParsedArgs, arg: string): void {
@@ -144,6 +161,12 @@ function handlePositionalArg(result: ParsedArgs, arg: string): void {
 		!result.subcommand &&
 		result.command === 'source' &&
 		['add', 'list', 'remove'].includes(arg)
+	) {
+		result.subcommand = arg;
+	} else if (
+		!result.subcommand &&
+		result.command === 'oauth' &&
+		['setup', 'list', 'remove', 'status'].includes(arg)
 	) {
 		result.subcommand = arg;
 	} else {
@@ -250,6 +273,7 @@ function parseArgs(args: string[]): ParseResult {
 			http: false,
 			noAuth: false,
 			printConfig: false,
+			oauth: false,
 		},
 	};
 	const unknownFlags: string[] = [];
@@ -437,6 +461,33 @@ EXAMPLES:
 `);
 			break;
 
+		case 'oauth':
+			console.log(`mdq oauth - Manage OAuth 2.1 authentication for remote access
+
+USAGE:
+  mdq oauth setup [options]       Create a new OAuth client
+  mdq oauth list                  List configured OAuth clients
+  mdq oauth remove <client-id>    Remove an OAuth client
+  mdq oauth status                Show OAuth status and tokens
+
+OPTIONS (for setup):
+  --client-id <id>         Client ID (default: auto-generated)
+  --name <name>            Client name (default: "Default Client")
+  --redirect-uri <uri>     Redirect URI (default: Claude.ai)
+
+NOTES:
+  OAuth 2.1 with PKCE provides secure authentication for remote access.
+  HTTPS is required when OAuth is enabled (use --cert and --key flags).
+  Access tokens expire after 1 hour (configurable via MDQ_OAUTH_TOKEN_EXPIRY).
+
+EXAMPLES:
+  mdq oauth setup --client-id claude --name "Claude"
+  mdq oauth list
+  mdq oauth status
+  mdq oauth remove claude
+`);
+			break;
+
 		case 'mcp':
 			console.log(`mdq mcp - Start MCP server for AI assistant integration
 
@@ -460,6 +511,9 @@ HTTP MODE OPTIONS:
   --host <string>          Host to bind (default: 127.0.0.1)
   --api-key <string>       API key for authentication (or set MDQ_MCP_API_KEY)
   --no-auth                Disable authentication (for testing only)
+  --oauth                  Enable OAuth 2.1 authentication (requires HTTPS)
+  --cert <path>            TLS certificate path (for HTTPS)
+  --key <path>             TLS private key path (for HTTPS)
 
 NOTES:
   If no sources are provided, registered sources from 'mdq source add' are used.
@@ -467,15 +521,33 @@ NOTES:
   CLI sources (-s flags) override registered sources.
 
 EXAMPLES:
+  # Local access (stdio)
   mdq mcp                        # uses registered sources
   mdq mcp ~/docs                 # uses only ~/docs (ignores registered)
   mdq mcp ~/docs ~/wiki ~/notes
   mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
-  # HTTP mode for remote access
-  export MDQ_MCP_API_KEY="your-secret-key-here"
+  # HTTP mode with Bearer token (simple)
+  export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
   mdq mcp --http ~/docs
   mdq mcp --http --port 8080 --host 0.0.0.0 ~/docs
+
+  # HTTPS mode with OAuth 2.1 (recommended for production)
+  # Step 1: Generate self-signed certificate (or use real cert)
+  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+  # Step 2: Create OAuth client
+  mdq oauth setup --client-id claude --name "Claude"
+
+  # Step 3: Start server with OAuth
+  mdq mcp --http --oauth --cert ./cert.pem --key ./key.pem ~/docs
+
+  # Step 4: Expose to internet (optional)
+  cloudflared tunnel --url https://localhost:3000
+
+  # Step 5: Connect from Claude web UI
+  # Settings > Connectors > Add custom connector
+  # Claude will auto-discover OAuth endpoints and guide you through authorization
 `);
 			break;
 
@@ -493,6 +565,7 @@ COMMANDS:
   embed              Generate embeddings for semantic search
   embed status       Check embedding service and Meilisearch connectivity
   source             Manage registered sources for MCP server
+  oauth              Manage OAuth 2.1 authentication
   mcp [sources...]   Start MCP server for AI assistant integration
 
 GLOBAL OPTIONS:
@@ -507,6 +580,7 @@ EXAMPLES:
   mdq index --path ~/docs
   mdq embed --path ~/docs --verbose
   mdq source add -s ~/docs -d "Documentation"
+  mdq oauth setup --client-id claude --name "Claude"
   mdq mcp
 `);
 	}
@@ -729,6 +803,20 @@ export async function run(args: string[]): Promise<void> {
 				break;
 			}
 
+			case 'oauth': {
+				const oauthArgs: OAuthCommandArgs = {
+					subcommand: parsed.subcommand ?? '',
+					positional: parsed.positional,
+					options: {
+						clientId: parsed.options.clientId,
+						name: parsed.options.name,
+						redirectUri: parsed.options.redirectUri,
+					},
+				};
+				runOAuthCommand(oauthArgs);
+				break;
+			}
+
 			case 'mcp': {
 				// Handle --print-config: output Claude Desktop JSON config
 				if (parsed.options.printConfig) {
@@ -818,6 +906,9 @@ export async function run(args: string[]): Promise<void> {
 							host: string;
 							apiKey: string;
 							noAuth: boolean;
+							oauth: boolean;
+							cert?: string;
+							key?: string;
 					  }
 					| undefined;
 
@@ -839,6 +930,9 @@ export async function run(args: string[]): Promise<void> {
 						host,
 						apiKey,
 						noAuth: parsed.options.noAuth,
+						oauth: parsed.options.oauth,
+						cert: parsed.options.cert,
+						key: parsed.options.key,
 					};
 				}
 
@@ -887,6 +981,9 @@ export async function run(args: string[]): Promise<void> {
 				printHelp();
 				process.exit(EXIT_CODES.INVALID_ARGS);
 		}
+
+		// Explicitly exit to clean up any lingering connections (e.g., MeiliSearch client)
+		process.exit(EXIT_CODES.SUCCESS);
 	} catch (error) {
 		handleError(error, formatter);
 	}

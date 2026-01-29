@@ -11,6 +11,9 @@ export async function runMcpCommand(
 		host: string;
 		apiKey: string;
 		noAuth: boolean;
+		oauth: boolean;
+		cert?: string;
+		key?: string;
 	},
 ): Promise<void> {
 	const client = createSearchClient();

@@ -75,10 +75,54 @@ export function validateBearerToken(req: Request, expectedToken: string): boolea
 	return timingSafeEqual(tokenBuffer, expectedBuffer);
 }
 
-export function createAuthError(): Response {
+/**
+ * Validate request authentication.
+ * Checks OAuth access token first (if enabled), then falls back to Bearer token.
+ *
+ * @param req - The HTTP request
+ * @param options - Authentication options
+ * @returns true if authenticated, false otherwise
+ */
+export function validateRequest(
+	req: Request,
+	options: {
+		oauthEnabled: boolean;
+		bearerToken: string;
+		validateOAuthToken?: (token: string) => boolean;
+	},
+): boolean {
+	const auth = req.headers.get('Authorization');
+	if (!auth) return false;
+
+	const [type, token] = auth.split(' ');
+	if (type !== 'Bearer' || !token) return false;
+
+	// Try OAuth token validation first if enabled
+	if (options.oauthEnabled && options.validateOAuthToken) {
+		if (options.validateOAuthToken(token)) {
+			return true;
+		}
+	}
+
+	// Fall back to Bearer token validation
+	return validateBearerToken(req, options.bearerToken);
+}
+
+export function createAuthError(baseUrl?: string): Response {
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+		...corsHeaders(),
+	};
+
+	// Add WWW-Authenticate header with OAuth metadata link if available
+	if (baseUrl) {
+		headers['WWW-Authenticate'] = `Bearer realm="${baseUrl}/mcp"`;
+		headers.Link = `<${baseUrl}/.well-known/oauth-protected-resource>; rel="oauth-protected-resource"`;
+	}
+
 	return new Response(
 		JSON.stringify({ error: 'Unauthorized', message: 'Invalid or missing API key' }),
-		{ status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() } },
+		{ status: 401, headers },
 	);
 }
 

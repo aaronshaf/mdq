@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (Superseded by ADR-0013 for authentication - OAuth support added)
 
 ## Context
 
@@ -108,6 +108,10 @@ Content-Type: application/json
 2. **No auth = error** - HTTP mode requires API key unless `--no-auth` explicitly set
 3. **CORS restricted** - Only `claude.ai` by default
 4. **Read-only** - MCP tools cannot modify files
+
+## See Also
+
+- [ADR-0013: OAuth 2.1 Authentication](./0013-oauth-authentication.md) - Adds OAuth support for production deployments
 
 ## References
 

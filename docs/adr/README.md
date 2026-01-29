@@ -18,3 +18,4 @@ Records of significant architectural decisions with context and rationale. Each 
 | [0010](0010-use-meilisearch-for-local-search.md) | Meilisearch for local search |
 | [0011](0011-smart-indexing-llm-embeddings.md) | Chunked embeddings for semantic search |
 | [0012](0012-mcp-http-transport.md) | MCP HTTP transport for remote access |
+| [0013](0013-oauth-authentication.md) | OAuth 2.1 authentication for production deployments |

@@ -19,6 +19,7 @@ import { validateCodeChallenge } from '../../lib/oauth/pkce.js';
 import {
 	exchangeAuthCode,
 	generateToken,
+	getAuthCode,
 	refreshAccessToken,
 	revokeToken,
 	storeAuthCode,
@@ -338,6 +339,18 @@ export async function runHttpMcpServer(
 				// Validate CSRF token
 				if (!validateCsrfToken(csrfToken)) {
 					throw new Error('Invalid or expired CSRF token');
+				}
+
+				// Retrieve and validate the authorization code
+				const authCodeData = getAuthCode(code);
+				if (!authCodeData) {
+					throw new Error('Invalid or expired authorization code');
+				}
+
+				// Validate that the redirect_uri from the form matches the stored one
+				// This prevents open redirect attacks by ensuring the redirect_uri hasn't been tampered with
+				if (authCodeData.redirect_uri !== redirectUri) {
+					throw new Error('Invalid redirect_uri');
 				}
 
 				if (action === 'deny') {

@@ -114,6 +114,31 @@ export function storeAuthCode(
 }
 
 /**
+ * Retrieve an authorization code by its code value.
+ * Does not delete the code - use exchangeAuthCode for token exchange.
+ *
+ * @returns Authorization code data if found and not expired, undefined otherwise
+ */
+export function getAuthCode(code: string): AuthorizationCode | undefined {
+	const storage = loadTokenStorage();
+
+	const authCode = storage.authorization_codes[code];
+	if (!authCode) {
+		return undefined;
+	}
+
+	// Check expiry
+	if (Date.now() > authCode.expires_at) {
+		// Clean up expired code
+		delete storage.authorization_codes[code];
+		saveTokenStorage(storage);
+		return undefined;
+	}
+
+	return authCode;
+}
+
+/**
  * Exchange an authorization code for an access token and refresh token.
  * Validates the code verifier against the stored PKCE challenge.
  * The authorization code is single-use and deleted after exchange.

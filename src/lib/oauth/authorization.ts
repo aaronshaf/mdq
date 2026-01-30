@@ -128,24 +128,6 @@ export function renderAuthorizationPage(params: {
 		.footer a:hover {
 			text-decoration: underline;
 		}
-		.spinner {
-			display: inline-block;
-			width: 14px;
-			height: 14px;
-			border: 2px solid rgba(255, 255, 255, 0.3);
-			border-radius: 50%;
-			border-top-color: white;
-			animation: spin 0.8s linear infinite;
-			margin-right: 8px;
-			vertical-align: middle;
-		}
-		@keyframes spin {
-			to { transform: rotate(360deg); }
-		}
-		button:disabled {
-			opacity: 0.7;
-			cursor: not-allowed;
-		}
 	</style>
 </head>
 <body>
@@ -186,29 +168,6 @@ export function renderAuthorizationPage(params: {
 			<p>Powered by <a href="https://github.com/aaronshaf/mdq" target="_blank">mdq</a></p>
 		</div>
 	</div>
-	<script>
-		// Add loading states to buttons when form is submitted
-		const form = document.querySelector('form');
-		const approveBtn = document.querySelector('.approve');
-		const denyBtn = document.querySelector('.deny');
-
-		form.addEventListener('submit', function(e) {
-			// Get which button was clicked
-			const submitter = e.submitter;
-
-			if (submitter === approveBtn) {
-				// Show loading state for approve
-				approveBtn.disabled = true;
-				denyBtn.disabled = true;
-				approveBtn.innerHTML = '<span class="spinner"></span>Approving...';
-			} else if (submitter === denyBtn) {
-				// Show loading state for deny
-				approveBtn.disabled = true;
-				denyBtn.disabled = true;
-				denyBtn.innerHTML = '<span class="spinner"></span>Denying...';
-			}
-		});
-	</script>
 </body>
 </html>`;
 }

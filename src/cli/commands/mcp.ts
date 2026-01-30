@@ -28,14 +28,16 @@ export async function runMcpCommand(
 	}
 	console.error(`[mdq] ${health.message}`);
 
-	// If HTTP mode enabled, validate API key and route to HTTP server
+	// If HTTP mode enabled, validate authentication and route to HTTP server
 	if (httpOptions?.enabled) {
-		if (!httpOptions.noAuth) {
+		if (!httpOptions.noAuth && !httpOptions.oauth) {
+			// When OAuth is not enabled, require API key for Bearer token auth
 			if (!httpOptions.apiKey) {
 				console.error(
 					'Error: API key required for HTTP mode. Set MDQ_MCP_API_KEY or use --api-key',
 				);
-				console.error('Use --no-auth to disable authentication (for testing only)');
+				console.error('Alternatively, use --oauth for OAuth 2.1 authentication');
+				console.error('Or use --no-auth to disable authentication (for testing only)');
 				process.exit(EXIT_CODES.INVALID_ARGS);
 			}
 

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { Minimatch } from 'minimatch';
 
 /**
- * Parse .mdignore file contents into ignore patterns.
+ * Parse .mdqignore file contents into ignore patterns.
  * Supports gitignore-style syntax:
  * - Lines starting with # are comments
  * - Blank lines are ignored
@@ -10,7 +10,7 @@ import { Minimatch } from 'minimatch';
  * - Patterns ending with / match directories only
  * - ! prefix negates a pattern (includes previously excluded files)
  */
-export function parseMdignore(content: string): string[] {
+export function parseMdqignore(content: string): string[] {
 	const lines = content.split('\n');
 	const patterns: string[] = [];
 
@@ -30,20 +30,20 @@ export function parseMdignore(content: string): string[] {
 }
 
 /**
- * Read .mdignore file from base directory.
+ * Read .mdqignore file from base directory.
  * Returns patterns, or empty array if file doesn't exist.
  */
-export async function readMdignore(basePath: string): Promise<string[]> {
-	const mdignorePath = path.join(basePath, '.mdignore');
+export async function readMdqignore(basePath: string): Promise<string[]> {
+	const mdqignorePath = path.join(basePath, '.mdqignore');
 
 	try {
-		const file = Bun.file(mdignorePath);
+		const file = Bun.file(mdqignorePath);
 		if (!(await file.exists())) {
 			return [];
 		}
 
 		const content = await file.text();
-		return parseMdignore(content);
+		return parseMdqignore(content);
 	} catch {
 		// If we can't read the file, treat it as empty
 		return [];
@@ -51,16 +51,16 @@ export async function readMdignore(basePath: string): Promise<string[]> {
 }
 
 /**
- * Check if a file path should be ignored based on .mdignore patterns.
+ * Check if a file path should be ignored based on .mdqignore patterns.
  * Paths should be relative to the base directory.
  *
  * @param relativePath - Path relative to base directory (e.g., "docs/README.md")
- * @param patterns - Array of ignore patterns from .mdignore
+ * @param patterns - Array of ignore patterns from .mdqignore
  * @returns true if the file should be ignored
  */
 export function shouldIgnore(relativePath: string, patterns: string[]): boolean {
-	// Always ignore .mdignore itself
-	if (relativePath === '.mdignore') {
+	// Always ignore .mdqignore itself
+	if (relativePath === '.mdqignore') {
 		return true;
 	}
 
@@ -94,17 +94,17 @@ export function shouldIgnore(relativePath: string, patterns: string[]): boolean 
 }
 
 /**
- * Filter a list of file paths based on .mdignore patterns.
+ * Filter a list of file paths based on .mdqignore patterns.
  * All paths should be relative to the base directory.
  *
  * @param files - Array of relative file paths
- * @param patterns - Array of ignore patterns from .mdignore
+ * @param patterns - Array of ignore patterns from .mdqignore
  * @returns Filtered array of files that should NOT be ignored
  */
 export function filterIgnored(files: string[], patterns: string[]): string[] {
 	if (patterns.length === 0) {
-		// Optimization: still need to filter .mdignore itself
-		return files.filter((file) => file !== '.mdignore');
+		// Optimization: still need to filter .mdqignore itself
+		return files.filter((file) => file !== '.mdqignore');
 	}
 
 	return files.filter((file) => !shouldIgnore(file, patterns));

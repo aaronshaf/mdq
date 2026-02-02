@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Glob } from 'bun';
 import { parseMarkdownFile } from '../markdown/index.js';
 import { type SearchClient, createSearchClient } from './client.js';
-import { readMdignore, shouldIgnore } from './mdignore.js';
+import { readMdqignore, shouldIgnore } from './mdqignore.js';
 import type { IndexResult, SearchDocument } from './types.js';
 
 const EXCLUDED_DIRS = new Set(['node_modules', '.git', '.svn', '.hg']);
@@ -54,7 +54,7 @@ function shouldExclude(filePath: string, basePath: string): boolean {
 
 export async function scanMarkdownFiles(
 	basePath: string,
-	mdignorePatterns: string[] = [],
+	mdqignorePatterns: string[] = [],
 ): Promise<string[]> {
 	const absoluteBase = path.resolve(basePath);
 	const glob = new Glob('**/*.md');
@@ -62,9 +62,9 @@ export async function scanMarkdownFiles(
 
 	for await (const file of glob.scan({ cwd: absoluteBase, absolute: true })) {
 		if (!shouldExclude(file, absoluteBase)) {
-			// Check .mdignore patterns
+			// Check .mdqignore patterns
 			const relativePath = path.relative(absoluteBase, file);
-			if (!shouldIgnore(relativePath, mdignorePatterns)) {
+			if (!shouldIgnore(relativePath, mdqignorePatterns)) {
 				files.push(file);
 			}
 		}
@@ -223,13 +223,13 @@ export async function indexDirectory(
 	const searchClient = client ?? createSearchClient();
 	const indexName = deriveIndexName(absolutePath);
 
-	// Read .mdignore patterns
-	const mdignorePatterns = await readMdignore(absolutePath);
-	if (verbose && mdignorePatterns.length > 0) {
-		console.error(`Loaded ${mdignorePatterns.length} ignore patterns from .mdignore`);
+	// Read .mdqignore patterns
+	const mdqignorePatterns = await readMdqignore(absolutePath);
+	if (verbose && mdqignorePatterns.length > 0) {
+		console.error(`Loaded ${mdqignorePatterns.length} ignore patterns from .mdqignore`);
 	}
 
-	const files = await scanMarkdownFiles(absolutePath, mdignorePatterns);
+	const files = await scanMarkdownFiles(absolutePath, mdqignorePatterns);
 	if (verbose) console.error(`Found ${files.length} markdown files`);
 
 	// Preserve embedding metadata from existing documents before recreating index

@@ -95,7 +95,7 @@ mdq search "security" --sort -updated_at     # Most recently updated
 
 ## Ignoring Files
 
-Create `.mdignore` in your directory root to exclude files from indexing. Uses gitignore-style syntax.
+Create `.mdqignore` in your directory root to exclude files from indexing. Uses gitignore-style syntax.
 
 ### Syntax
 

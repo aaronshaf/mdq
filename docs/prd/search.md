@@ -176,11 +176,11 @@ The following are excluded from indexing by default:
 | `node_modules/` | Package dependencies |
 | `AGENTS.md` | AI agent instructions |
 | `CLAUDE.md` | AI agent instructions |
-| `.mdignore` patterns | User-defined exclusions |
+| `.mdqignore` patterns | User-defined exclusions |
 
-### .mdignore
+### .mdqignore
 
-Users can create a `.mdignore` file with gitignore-style patterns:
+Users can create a `.mdqignore` file with gitignore-style patterns:
 
 ```
 # Ignore drafts

@@ -12,10 +12,10 @@ export {
 export { Indexer, deriveIndexName, indexDirectory, scanMarkdownFiles } from './indexer.js';
 export {
 	filterIgnored,
-	parseMdignore,
-	readMdignore,
+	parseMdqignore,
+	readMdqignore,
 	shouldIgnore,
-} from './mdignore.js';
+} from './mdqignore.js';
 export {
 	Embedder,
 	createEmbedder,

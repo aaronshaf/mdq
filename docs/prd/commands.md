@@ -154,7 +154,7 @@ Indexed 1004/1004 files
 ...
 ```
 
-**Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdignore` are automatically excluded.
+**Exclusions:** Dot files/folders, `node_modules/`, `AGENTS.md`, `CLAUDE.md`, and patterns in `.mdqignore` are automatically excluded.
 
 ### mdq embed
 

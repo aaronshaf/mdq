@@ -206,22 +206,15 @@ export async function handleRead(
 			const parsed = await parseMarkdownFile(filePath, source.path);
 			const stat = await file.stat();
 
-			// Extract reference if present
-			const reference =
-				typeof parsed.frontmatter.reference === 'string' ? parsed.frontmatter.reference : undefined;
-
 			return {
 				id: parsed.id,
 				title: parsed.title,
 				content: parsed.content,
 				path: parsed.path,
-				labels: parsed.frontmatter.labels,
-				author_email: parsed.frontmatter.author_email,
+				source: source.name,
 				created_at: stat?.birthtime.getTime(),
 				updated_at: stat?.mtime.getTime(),
-				child_count: parsed.frontmatter.child_count,
-				reference,
-				source: source.name,
+				frontmatter: parsed.frontmatter,
 			};
 		} catch (error) {
 			// Log and continue to next source on errors (e.g., missing index, network issues)

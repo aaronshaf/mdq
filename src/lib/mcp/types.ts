@@ -1,4 +1,4 @@
-import type { SearchDocument, SearchResult } from '../search/types.js';
+import type { SearchResult } from '../search/types.js';
 
 // MCP API uses snake_case for external consistency
 export interface SearchToolInput {
@@ -32,6 +32,13 @@ export interface ReadToolInput {
 	source?: string;
 }
 
-export interface ReadToolOutput extends SearchDocument {
+export interface ReadToolOutput {
+	id: string;
+	title: string;
+	content: string;
+	path: string;
 	source: string;
+	created_at?: number; // From filesystem
+	updated_at?: number; // From filesystem
+	frontmatter: Record<string, unknown>; // All front matter fields
 }

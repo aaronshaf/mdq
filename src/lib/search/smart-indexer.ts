@@ -47,6 +47,20 @@ export class Embedder {
 		if (options.reset) {
 			this.logger.info('Reset mode: deleting existing chunks index');
 			await this.searchClient.deleteIndex(chunksIndexName);
+
+			// Clear embedded_at on all documents so interrupted resets can resume
+			this.logger.info('Reset mode: clearing embedding metadata');
+			const docsToReset = await this.searchClient.getAllDocuments(indexName);
+			const resetUpdates = docsToReset
+				.filter((doc) => doc.embedded_at !== undefined)
+				.map((doc) => ({
+					id: doc.id,
+					embedded_at: null as unknown as undefined,
+					chunk_count: null as unknown as undefined,
+				}));
+			if (resetUpdates.length > 0) {
+				await this.searchClient.updateDocuments(indexName, resetUpdates);
+			}
 		}
 
 		// Ensure chunks index exists with embedder configured

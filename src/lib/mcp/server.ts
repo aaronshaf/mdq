@@ -55,9 +55,10 @@ Each result includes:
 - Basic metadata: id, title, path, created_at, updated_at, author_email, labels
 - Content: snippet (excerpt from the document)
 - Citation: reference (Chicago-style citation for the source, if available) - USE THIS FOR FOOTNOTES
-- Smart indexing data (if available): summary
 
-IMPORTANT: summary is AI-GENERATED and should NOT be quoted or cited as authoritative. Only quote directly from the document content or snippet. Use the reference field for proper citations.${sourceList}`,
+IMPORTANT:
+- Only quote directly from the document content or snippet. Use the reference field for proper citations.
+- For full front matter metadata (including custom fields), use read_page.${sourceList}`,
 		SearchToolParamsShape,
 		async (params) => {
 			try {
@@ -107,7 +108,12 @@ IMPORTANT: summary is AI-GENERATED and should NOT be quoted or cited as authorit
 		'read_page',
 		`Read the full content of a specific Markdown page. Use either the path (from search results) or the page ID.${sources.length > 1 ? ` Specify source if ambiguous.${sourceList}` : ''}
 
-Use this tool to get QUOTABLE TEXT for citations. The content field contains the full document text that can be directly quoted. The reference field (if available) provides the Chicago-style citation to use in footnotes.`,
+Use this tool to get QUOTABLE TEXT for citations. The content field contains the full document text that can be directly quoted.
+
+Returns:
+- Structural fields: id, title, content, path, source
+- Filesystem timestamps: created_at, updated_at
+- frontmatter: All front matter metadata (labels, author_email, reference, and any custom fields)`,
 		ReadToolParamsBaseShape,
 		async (params) => {
 			try {

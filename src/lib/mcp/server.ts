@@ -173,6 +173,8 @@ export async function createMcpServer(
 			console.error(`[mdq] Starting MCP server for sources: ${sourceList}`);
 			await server.connect(transport);
 			console.error('[mdq] MCP server connected');
+			// Keep the server running until explicitly closed
+			await new Promise(() => {});
 		},
 		async close() {
 			console.error('[mdq] Closing MCP server');

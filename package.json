@@ -1,6 +1,6 @@
 {
   "name": "@aaronshaf/mdq",
-  "version": "0.6.27",
+  "version": "1.0.0",
   "description": "CLI tool for indexing and searching local markdown files via Meilisearch",
   "repository": {
     "type": "git",

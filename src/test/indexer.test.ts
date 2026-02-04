@@ -322,4 +322,115 @@ Invalid child count.
 		expect(doc).not.toBeNull();
 		expect(doc?.child_count).toBeUndefined();
 	});
+
+	test('indexes curatorNote from frontmatter', async () => {
+		// Create a test markdown file with curatorNote
+		const testFile = path.join(testDir, 'with-note.md');
+		const content = `---
+title: Annotated Page
+curatorNote: This document provides important historical context.
+---
+
+# Annotated Page
+
+Content here.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'with-note');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.curatorNote).toBe('This document provides important historical context.');
+	});
+
+	test('omits invalid curatorNote types from index', async () => {
+		// Create a test markdown file with invalid curatorNote type
+		const testFile = path.join(testDir, 'invalid-note.md');
+		const content = `---
+title: Invalid Note Type
+curatorNote:
+  - array
+  - of
+  - items
+---
+
+# Invalid Note Type
+
+Content.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'invalid-note');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.curatorNote).toBeUndefined();
+	});
+
+	test('omits empty curatorNote from index', async () => {
+		// Create a test markdown file with empty curatorNote
+		const testFile = path.join(testDir, 'empty-note.md');
+		const content = `---
+title: Empty Note
+curatorNote: ""
+---
+
+# Empty Note
+
+Empty note should be omitted.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'empty-note');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.curatorNote).toBeUndefined();
+	});
+
+	test('omits whitespace-only curatorNote from index', async () => {
+		// Create a test markdown file with whitespace-only curatorNote
+		const testFile = path.join(testDir, 'whitespace-note.md');
+		const content = `---
+title: Whitespace Note
+curatorNote: "   "
+---
+
+# Whitespace Note
+
+Whitespace-only note should be omitted.
+`;
+
+		fs.writeFileSync(testFile, content);
+
+		// Index the directory
+		const result = await indexDirectory(testDir, client);
+		expect(result.indexed).toBe(1);
+
+		// Get document by ID
+		const indexName = deriveIndexName(testDir);
+		const doc = await client.getDocumentById(indexName, 'whitespace-note');
+
+		expect(doc).not.toBeNull();
+		expect(doc?.curatorNote).toBeUndefined();
+	});
 });

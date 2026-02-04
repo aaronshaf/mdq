@@ -169,6 +169,11 @@ async function parseFileToDocument(
 		const reference =
 			typeof parsed.frontmatter.reference === 'string' ? parsed.frontmatter.reference : undefined;
 
+		// Extract curatorNote field if present (for curator commentary)
+		// Treat empty/whitespace-only strings as missing
+		const rawNote = parsed.frontmatter.curatorNote;
+		const curatorNote = typeof rawNote === 'string' && rawNote.trim() ? rawNote : undefined;
+
 		return {
 			document: {
 				id: parsed.id,
@@ -181,6 +186,7 @@ async function parseFileToDocument(
 				updated_at: updatedAt,
 				child_count: parsed.frontmatter.child_count,
 				reference,
+				curatorNote,
 			},
 		};
 	} catch (error) {

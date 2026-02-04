@@ -175,6 +175,7 @@ export class Embedder {
 							author_email: doc.author_email,
 							created_at: doc.created_at,
 							updated_at: doc.updated_at,
+							curatorNote: doc.curatorNote,
 							_vectors: { default: embedding },
 						});
 					}

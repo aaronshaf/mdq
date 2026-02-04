@@ -9,6 +9,7 @@ export interface SearchDocument {
 	updated_at?: number;
 	child_count?: number;
 	reference?: string; // Chicago-style citation for the source
+	curatorNote?: string; // Curator's commentary about this document
 	// Embedding fields
 	embedded_at?: number;
 	chunk_count?: number;
@@ -25,6 +26,7 @@ export interface ChunkDocument {
 	author_email?: string;
 	created_at?: number;
 	updated_at?: number;
+	curatorNote?: string; // Denormalized from parent
 	_vectors: { default: number[] };
 }
 
@@ -54,6 +56,7 @@ export interface SearchResult {
 	updated_at?: number;
 	child_count?: number;
 	reference?: string; // Chicago-style citation for the source
+	curatorNote?: string; // Curator's commentary about this document
 }
 
 export interface SearchResponse {

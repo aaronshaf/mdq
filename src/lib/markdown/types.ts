@@ -6,6 +6,8 @@ export interface MarkdownFrontmatter {
 	created_at?: string | Date; // gray-matter may parse ISO dates as Date objects
 	updated_at?: string | Date; // gray-matter may parse ISO dates as Date objects
 	child_count?: number;
+	reference?: string; // Chicago-style citation for the source
+	curatorNote?: string; // Curator's commentary about this document
 	[key: string]: unknown;
 }
 

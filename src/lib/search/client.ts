@@ -121,6 +121,7 @@ export class SearchClient {
 					updated_at: hit.updated_at,
 					child_count: hit.child_count,
 					reference: hit.reference,
+					curatorNote: hit.curatorNote,
 				},
 				keywordRank: idx + 1,
 				semanticRank: 0, // Will be updated if found in chunks
@@ -158,6 +159,7 @@ export class SearchClient {
 						author_email: chunk.author_email,
 						created_at: chunk.created_at,
 						updated_at: chunk.updated_at,
+						curatorNote: chunk.curatorNote,
 					},
 					keywordRank: 0,
 					semanticRank,

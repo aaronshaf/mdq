@@ -91,6 +91,7 @@ export async function handleSearch(
 					updated_at: r.updated_at,
 					child_count: r.child_count,
 					reference: r.reference,
+					curatorNote: r.curatorNote,
 					source: source.name,
 				})),
 				total: response.total,

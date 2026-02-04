@@ -55,9 +55,11 @@ Each result includes:
 - Basic metadata: id, title, path, created_at, updated_at, author_email, labels
 - Content: snippet (excerpt from the document)
 - Citation: reference (Chicago-style citation for the source, if available) - USE THIS FOR FOOTNOTES
+- curatorNote (if present): Curator's commentary about this document - NOT part of the original content
 
 IMPORTANT:
 - Only quote directly from the document content or snippet. Use the reference field for proper citations.
+- curatorNote is metadata commentary from the curator, not quotable document content.
 - For full front matter metadata (including custom fields), use read_page.${sourceList}`,
 		SearchToolParamsShape,
 		async (params) => {

@@ -254,7 +254,11 @@ mdq mcp -s ~/docs -d "Documentation"
 For remote access using simple API key authentication:
 
 ```bash
-export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+# Generate API token
+mdq token generate  # Save the generated token
+
+# Start server with token
+export MDQ_MCP_API_KEY="<your-token>"
 mdq mcp --http -s ~/docs -d "Documentation"
 mdq mcp --http --port 8080 --host 0.0.0.0 -s ~/docs -d "Documentation"
 ```

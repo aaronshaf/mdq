@@ -34,6 +34,7 @@ mdq search <query>      Search indexed content
 mdq index               Build/rebuild index
 mdq embed               Generate embeddings for semantic search
 mdq source              Manage registered sources for MCP server
+mdq token               Generate API tokens for Bearer authentication
 mdq oauth               Manage OAuth 2.1 authentication
 mdq mcp [sources...]    Start MCP server
 ```
@@ -55,7 +56,8 @@ mdq mcp
 mdq mcp -s ~/docs -d "Documentation"
 
 # HTTP mode with Bearer token (simple)
-export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq token generate  # Generate and save the token
+export MDQ_MCP_API_KEY="<your-token>"
 mdq mcp --http
 
 # Or use OAuth 2.1 (recommended for production)

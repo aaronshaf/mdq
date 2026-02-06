@@ -15,6 +15,7 @@ import {
 	runStatusCommand,
 } from './commands/search.js';
 import { type SourceCommandArgs, runSourceCommand } from './commands/source.js';
+import { type TokenCommandArgs, runTokenCommand } from './commands/token.js';
 
 // Read version at module load time - Bun resolves JSON imports synchronously
 import packageJson from '../../package.json';
@@ -70,6 +71,8 @@ interface ParsedArgs {
 		// OAuth command options
 		clientId?: string;
 		redirectUris: string[]; // Multiple redirect URIs supported
+		// Token command options
+		length?: number;
 	};
 }
 
@@ -170,6 +173,8 @@ function handlePositionalArg(result: ParsedArgs, arg: string): void {
 		['setup', 'list', 'remove', 'status'].includes(arg)
 	) {
 		result.subcommand = arg;
+	} else if (!result.subcommand && result.command === 'token' && ['generate'].includes(arg)) {
+		result.subcommand = arg;
 	} else {
 		result.positional.push(arg);
 	}
@@ -252,6 +257,16 @@ function tryParseFlag(
 			process.exit(EXIT_CODES.INVALID_ARGS);
 		}
 		options.port = port;
+		return 2;
+	}
+
+	if (arg === '--length' && nextArg !== undefined) {
+		const length = Number.parseInt(nextArg, 10);
+		if (Number.isNaN(length) || length < 16 || length > 128) {
+			console.error('Error: --length must be a number between 16 and 128 (bytes)');
+			process.exit(EXIT_CODES.INVALID_ARGS);
+		}
+		options.length = length;
 		return 2;
 	}
 
@@ -503,6 +518,36 @@ EXAMPLES:
 `);
 			break;
 
+		case 'token':
+			console.log(`mdq token - Generate API tokens for Bearer authentication
+
+USAGE:
+  mdq token generate [options]    Generate a new secure API token
+
+OPTIONS:
+  --length <n>    Token length in bytes (default: 32, min: 16, max: 128)
+
+NOTES:
+  Bearer token authentication is simpler than OAuth but less secure:
+  - No expiry (static token)
+  - No user consent flow
+  - Manual credential distribution
+
+  For production deployments, consider using OAuth 2.1 instead (mdq oauth).
+
+  Tokens are cryptographically secure random values displayed once.
+  Save the token securely - it cannot be retrieved later.
+
+EXAMPLES:
+  mdq token generate
+  mdq token generate --length 64
+
+  # Use the generated token:
+  export MDQ_MCP_API_KEY="<your-token>"
+  mdq mcp --http
+`);
+			break;
+
 		case 'mcp':
 			console.log(`mdq mcp - Start MCP server for AI assistant integration
 
@@ -590,6 +635,7 @@ COMMANDS:
   embed              Generate embeddings for semantic search
   embed status       Check embedding service and Meilisearch connectivity
   source             Manage registered sources for MCP server
+  token              Generate API tokens for Bearer authentication
   oauth              Manage OAuth 2.1 authentication
   mcp [sources...]   Start MCP server for AI assistant integration
 
@@ -605,6 +651,7 @@ EXAMPLES:
   mdq index --path ~/docs
   mdq embed --path ~/docs --verbose
   mdq source add -s ~/docs -d "Documentation"
+  mdq token generate
   mdq oauth setup --client-id claude --name "Claude"
   mdq mcp
 `);
@@ -825,6 +872,17 @@ export async function run(args: string[]): Promise<void> {
 					mcpSources: parsed.mcpSources,
 				};
 				runSourceCommand(sourceArgs);
+				break;
+			}
+
+			case 'token': {
+				const tokenArgs: TokenCommandArgs = {
+					subcommand: parsed.subcommand ?? '',
+					options: {
+						length: parsed.options.length,
+					},
+				};
+				runTokenCommand(tokenArgs);
 				break;
 			}
 

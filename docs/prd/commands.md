@@ -372,7 +372,8 @@ mdq mcp
 mdq mcp -s ~/notes -d "Personal journal" -s ~/wiki -d "Team docs"
 
 # HTTP mode with Bearer token
-export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq token generate  # Generate and save the token
+export MDQ_MCP_API_KEY="<your-token>"
 mdq mcp --http -s ~/docs -d "Documentation"
 
 # HTTPS mode with OAuth (recommended)

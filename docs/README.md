@@ -402,9 +402,11 @@ Best for quick testing or single-user scenarios:
 
 ```bash
 # Generate API key
-export MDQ_MCP_API_KEY="$(openssl rand -hex 32)"
+mdq token generate
+# Save the generated token
 
 # Start HTTP server
+export MDQ_MCP_API_KEY="<your-token>"
 mdq mcp --http -s ~/docs -d "Documentation"
 
 # Custom port/host

@@ -51,7 +51,20 @@ export class HumanFormatter implements Formatter {
 		}
 
 		if ('indexed' in obj && 'total' in obj) {
-			return `Indexed ${obj.indexed}/${obj.total} files`;
+			const lines: string[] = [`Indexed ${obj.indexed}/${obj.total} files`];
+
+			// Show error details if any
+			if (obj.errors && Array.isArray(obj.errors) && obj.errors.length > 0) {
+				lines.push(''); // blank line
+				lines.push(chalk.yellow(`Failed to index ${obj.errors.length} file(s):`));
+				for (const err of obj.errors) {
+					const errorObj = err as { file: string; error: string };
+					lines.push(chalk.dim(`  ${errorObj.file}`));
+					lines.push(chalk.red(`    ${errorObj.error}`));
+				}
+			}
+
+			return lines.join('\n');
 		}
 
 		return Object.entries(obj)

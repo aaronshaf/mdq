@@ -77,6 +77,7 @@ export interface IndexResult {
 	indexed: number;
 	total: number;
 	indexName: string;
+	errors?: Array<{ file: string; error: string }>;
 }
 
 export interface EmbedResult {

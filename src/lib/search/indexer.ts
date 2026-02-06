@@ -76,6 +76,7 @@ export async function scanMarkdownFiles(
 interface ParseResult {
 	document: SearchDocument | null;
 	error?: string;
+	file?: string;
 }
 
 /**
@@ -193,6 +194,7 @@ async function parseFileToDocument(
 		return {
 			document: null,
 			error: error instanceof Error ? error.message : String(error),
+			file,
 		};
 	}
 }
@@ -201,8 +203,13 @@ async function parseAllFiles(
 	files: string[],
 	basePath: string,
 	verbose: boolean,
-): Promise<{ documents: SearchDocument[]; errors: number }> {
+): Promise<{
+	documents: SearchDocument[];
+	errors: number;
+	errorDetails: Array<{ file: string; error: string }>;
+}> {
 	const documents: SearchDocument[] = [];
+	const errorDetails: Array<{ file: string; error: string }> = [];
 	let errors = 0;
 
 	for (const file of files) {
@@ -211,13 +218,17 @@ async function parseAllFiles(
 			documents.push(result.document);
 		} else {
 			errors++;
+			errorDetails.push({
+				file: result.file ?? file,
+				error: result.error ?? 'Unknown error',
+			});
 			if (verbose) {
 				console.error(`Error parsing ${file}: ${result.error ?? 'Unknown error'}`);
 			}
 		}
 	}
 
-	return { documents, errors };
+	return { documents, errors, errorDetails };
 }
 
 export async function indexDirectory(
@@ -264,7 +275,7 @@ export async function indexDirectory(
 	await searchClient.deleteIndex(indexName);
 	await searchClient.createIndex(indexName);
 
-	const { documents, errors } = await parseAllFiles(files, absolutePath, verbose);
+	const { documents, errors, errorDetails } = await parseAllFiles(files, absolutePath, verbose);
 
 	// Restore embedding metadata for unchanged documents
 	let preservedCount = 0;
@@ -300,7 +311,12 @@ export async function indexDirectory(
 
 	if (verbose) console.error(`Indexed ${documents.length} documents (${errors} errors)`);
 
-	return { indexed: documents.length, total: files.length, indexName };
+	return {
+		indexed: documents.length,
+		total: files.length,
+		indexName,
+		errors: errorDetails.length > 0 ? errorDetails : undefined,
+	};
 }
 
 export class Indexer {
